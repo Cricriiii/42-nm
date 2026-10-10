@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/10 00:18:11 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/10 15:04:35 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -39,8 +39,10 @@ OBJ_DIR		:= $(WORKSPACE)/.object
 FILES_C		:= $(shell find $(SRC_DIR) -type f -name '*.c')
 FILES_O		:= $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(FILES_C))
 
+CVECTOR		:= $(WORKSPACE)/../c-vector
+
 INCLUDES	:= $(WORKSPACE)/include
-# INCLUDES	+= 
+INCLUDES	+= $(WORKSPACE)/../c-vector
 INCLUDES	:= $(INCLUDES:%=-I %)
 
 # ---------------------------------------------------------------------------- #
@@ -48,7 +50,9 @@ INCLUDES	:= $(INCLUDES:%=-I %)
 # ---------------------------------------------------------------------------- #
 
 ## Build the program
-all: $(PROGRAM)
+all:
+	+$(MAKE) c-vector
+	+$(MAKE) $(PROGRAM)
 
 $(PROGRAM): $(FILES_O)
 	$(CC) $(C_FLAGS) $(INCLUDES) $^ -o $@
@@ -64,6 +68,13 @@ re:
 	+$(MAKE) fclean
 	+$(MAKE) all
 
+c-vector:
+ifeq ($(wildcard $(WORKSPACE)/../c-vector),)
+	@git clone https://github.com/eteran/c-vector.git $(CVECTOR)
+else
+	@echo "c-vector is already installed"
+endif
+
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
 # ---------------------------------------------------------------------------- #
@@ -75,7 +86,12 @@ clean:
 # Call 'clean' and delete executable
 fclean:
 	+$(MAKE) clean
-	@rm -f $(CURDIR)/$(PROGRAM)
+	@rm -f $(WORKSPACE)/$(PROGRAM)
+
+## Call 'fclean' and delete all librairies
+reset:
+	+$(MAKE) fclean
+	@rm -rf $(CVECTOR)
 
 
 # ---------------------------------------------------------------------------- #
