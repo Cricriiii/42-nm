@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/10 14:53:01 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/11 23:27:54 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -70,8 +70,6 @@ re:
 lre:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) re
 
-if
-
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
 # ---------------------------------------------------------------------------- #
@@ -92,7 +90,10 @@ lfclean:
 
 ## reset
 reset:
-	
+
+## local reset
+lreset:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) reset
 
 # ---------------------------------------------------------------------------- #
 # misc                                                                         #
@@ -100,7 +101,7 @@ reset:
 
 ## Format files
 format:
-	@find . -name "*.cpp" -o -name "*.hpp" | xargs clang-format -i
+	+$(MAKE) -C $(WORKSPACE_LOCAL) format
 
 # Provided by https://gitlab.com/depressiveRobot/make-help/blob/master/help.mk
 ## Show this help
@@ -117,4 +118,4 @@ help:
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
 	@echo
 
-.PHONY: all run local re lre clean lclean fclean lfclean format help
+.PHONY: all run local re lre clean lclean fclean lfclean reset lreset format help

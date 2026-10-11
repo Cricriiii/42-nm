@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/10 00:22:15 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/10 15:52:29 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/11 23:31:29 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,9 +96,9 @@ int main(int argc, char** argv, char** envp) {
         global_args.no_sort, global_args.rsort, global_args.undef_only);
 
     printf("Files:\n");
-    for (size_t i = 0; i < cvector_size(global_args.filename); i++) {
-        printf("  %s\n", global_args.filename[i]);
-    }        
-
+    for (cvector_iterator(char*) it = cvector_begin(global_args.filename);
+         it != cvector_end(global_args.filename); ++it) {
+        printf("  %s\n", *it);
+    }
     return (0);
 }
