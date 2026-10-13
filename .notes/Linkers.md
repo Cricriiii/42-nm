@@ -326,21 +326,21 @@ $ gcc p.o -Wl,--start-group libx.a liby.a -Wl,--end-group
 
 ## Relogement
 
-Une fois que le linker a terminé sa phase de relogement des sympboles, chaque symbole est associé à exactement une définition de symbole (c'est-à-dire une entre dans la table des symboles de ses modules objets sources).
+Une fois que le linker a terminé la phase de relogement des sympoles, chaque symbole est associé à exactement une définition (c'est-à-dire une entrée dans la table des symboles de ses modules objets sources).
 
-Le linker connaît désormais la taille des sections de code et de données de ses modules objets en entrée. 
+Le linker connaît désormais la taille des sections de code et de données de ses modules objets sources. 
 
-Il est alors rêt à entamer la `phase de relogement`, dans laquelle les modules d'entrée sont fusionnés et  où les adresses `runtime` de chaque symbole sont assignées.
+Il est alors prêt à entamer la `phase de relogement`, dans laquelle les modules d'entrée sont fusionnés et les adresses `runtime` de chaque symbole sont assignées.
 
 Cette phase se déroule en deux étapes: 
 
 1. **Relogement des sections et des définitions de symboles**: durant cette étape, le linker agrège toutes les sections d'un même type en une seule section du même type. Par exemple, toutes les sections `.data` sont agrégées en une seule section `.data` correspondant au fichier exécutable. Le linker assigne alors une adresse `runtime` à chaque section agrégée (exemple `.data`), à chaque section provenant des fichiers en entrée (conceptuellement, `.data.a.o`, `.data.b.o`, bien que ces sections ne soient pas nommées ainsi), et à chaque symbole défini dans les modules en entrée. Au sortir de cette étape, chaque instruction et chaque variable globale du programme a une adresse `runtime` unique.
 
-2. **Relogement des références aux symboles au sein des sections**: durant cette étape, le linker modifie chaque référence à un symbole dans le corps des sections de code et de données, de telle sorte qu'elles pointent vers la bonne adresse `runtime`. Pour ce faire, le linker s'appuie sur des `structures` nommées `entrées de relogement` ou `relocation entries`.
+2. **Relogement des références aux symboles au sein des sections**: durant cette étape, le linker associe chaque référence à un symbole dans le corps des sections de code et de données, de telle sorte qu'elles pointent vers la bonne adresse `runtime`. Pour ce faire, le linker s'appuie sur des `structures` nommées `entrées de relogement` ou `relocation entries`.
 
 ### Relocation entries
 
-Lorsque que l'assembleur génère un module objet, il ne connaît pas encore l'emplacement final où son code et de ses données seront stockés. Il ne connaît pas non plus l'emplacement des fonctions et des variables globales définies par d'autres modules. 
+Lorsque que l'assembleur génère un module objet, il ne connaît pas encore l'emplacement final où son code et ses données seront stockés. Il ne connaît pas non plus l'emplacement des fonctions et des variables globales définies par d'autres modules. 
 
 Dès que l'assembleur rencontre une référence à un objet dont l'emplacement final est inconnu, il génère une `entrée de relogement` qui lui permet d'indiquer au linker comment modifier la référence lorsqu'il devra fusionner les fichiers objets en un exécutable.
 
@@ -357,16 +357,16 @@ typedef struct {
 } Elf64_Rela;
 ```
 Avec:
-- `offset`: offset de la section pour la référence à modifier
+- `offset`: offset dans la section pour la référence à modifier
 - `symbol`: indique le symbole vers lequel la référence modifiée devrait pointer (ex: une fonction)
 - `type`: indique au linker comment modifier la référence (ex: `R_X86_64_PC32`)
 - `addend`: une constante signée utilisée par certains `type` de relocation pour moduler la valeur de la référence modifiée
 
 #### Types de relogement
 
-Le format `ELF` définit 32 types de relogement. Les plus courants sont:
+Le format `ELF` définit 32 types de relogement. Les plus courants et simples sont:
 
-- `R_X86_64_PC32`: Relogement d'une référence qui utilise une adresse relative de 32 bits relative au `PC` (`Program Counter`). Lorsque le `CPU` exécute une instruction utilisant une adresse relative au `PC`, il calcule l'`effective address` (c'est-à-dire la cible de l'instruction `call`) en ajoutant la valeur 32-bits encodée dans l'instruction à la valeur courante du `PC` -> il s'agit toujours de l'adresse de l'instruction suivante.
+- `R_X86_64_PC32`: Relogement d'une référence qui utilise une adresse de 32 bits relative au `PC` (`Program Counter`). Lorsque le `CPU` exécute une instruction utilisant une adresse relative au `PC`, il calcule l'`effective address` (c'est-à-dire la cible de l'instruction `call`) en ajoutant la valeur 32-bits encodée dans l'instruction à la valeur courante du `PC` -> il s'agit toujours de l'adresse de l'instruction suivante.
 
 - `R_X86_64_32`: Reloge une référence qui utilise une adresse absolue en 32 bits. Avec une adresse absolue, le `CPU` utilise directement la valeur 32 bits encodée dans l'instruction en guise d'`effective address`, sans autre modification.
 
@@ -375,22 +375,35 @@ Le format `ELF` définit 32 types de relogement. Les plus courants sont:
 > C'est le comportement par défaut des compilateurs tels que `gcc`. Les programmes plus grands que 2Go doivent être compilés avec l'option `-mcmodel=medium` ou `-mcmodel=large`.
 
 
+## Relogement des références aux symboles
 
+### Algorithme de relogement
 
+```
+foreach section s {
+  foreach relocation entry r {
+    refptr = s + r.offset; /* ptr to reference to be relocated */
 
+    /* Relocate a PC-relative reference */
+    if (r.type == R_X86_64_PC32) {
+      refaddr = ADDR(s) + r.offset; /* ref’s run-time address */
+      *refptr = (unsigned) (ADDR(r.symbol) + r.addend - refaddr);
+    }
 
+    /* Relocate an absolute reference */
+    if (r.type == R_X86_64_32)
+      *refptr = (unsigned) (ADDR(r.symbol) + r.addend);
+  }
+}
+```
 
-
-
-
-Votre intuition d'une table agrégée est fausse : les relocations ne sont jamais agrégées. Seul le contenu des sections (.text, .data) l'est.
-
-Sur quoi boucle s
+#### Sur quoi boucle s
 
 s parcourt les sections d'entrée, celles de chaque .o : la .text de main.o, la .text de sum.o, la .data de main.o, etc. Ce sont vos « sections intermédiaires » (la notation .text.fichier_b est la vôtre, ça n'existe pas dans l'ELF : chaque .o a simplement sa propre section nommée .text).
 
 Le livre est elliptique : sa boucle est en fait imbriquée dans un parcours de tous les modules.
 
+```
 foreach module m {
   foreach section s de m {                  // .text de m, .data de m...
     foreach relocation entry r de .rela.s de m {
@@ -398,193 +411,470 @@ foreach module m {
     }
   }
 }
+```
 
-Sur quoi boucle r
+#### Sur quoi boucle r
 
-Pour une section s donnée, r ne parcourt que les entrées de la table de relocations de cette section dans ce .o : .rela.text de main.o pour s = .text de main.o, et ainsi de suite. Deux s différents ne bouclent donc jamais sur les mêmes r.
+Pour une section `s` donnée, `r` ne parcourt que les entrées de la table de relocations de cette section dans ce .o : `.rela.text` de `main.o` pour `s = .text de main.o`, et ainsi de suite. Deux `s` différents ne bouclent donc jamais sur les mêmes `r`.
 
-main.o   .text  ──▶ .rela.text de main.o   (entrées : array, sum)
-main.o   .data  ──▶ .rela.data de main.o   (si elle existe)
-sum.o    .text  ──▶ .rela.text de sum.o    (absente ici)
+`main.o`   `.text`  -> `.rela.text` de `main.o`   (entrées : `array`, `sum`)
+`main.o`   `.data`  -> `.rela.data` de `main.o`   (si elle existe)
+`sum.o`    `.text`  -> `.rela.text` de `sum.o`    (absente ici)
 
-Pourquoi r.offset est cohérent
+Dans une entrée, `r.offset` est l'offset dans la section d'entrée à laquelle elle s'applique, donc dans la `.text` de ce `.o`. C'est pourquoi le livre écrit: `ADDR(s) + r.offset` : `ADDR(s)` est l'adresse finale de cette section d'entrée (calculée en phase 1), pas celle de l'agrégat. Si les relocations étaient fusionnées, les offsets deviendraient ambigus (offset 0x11 de quel fichier ?).
 
-Dans une entrée, r.offset est l'offset dans la section d'entrée à laquelle elle s'applique, donc dans la .text de ce .o. C'est pourquoi la formule du livre écrit ADDR(s) + r.offset : ADDR(s) est l'adresse finale de cette section d'entrée (calculée en phase 1), pas celle de l'agrégat. Si les relocations étaient fusionnées, les offsets deviendraient ambigus (offset 0x11 de quel fichier ?).
+#### Ce qui est agrégé dans l'exécutable final
 
-Ce qui est agrégé dans l'exécutable final
+Les octets des sections de même type sont concaténés dans `.text`, `.data`, etc. Les relocations, elles, sont lues, appliquées, puis jetées. Il ne reste dans l'exécutable que les relocations de chargement dynamique (.rela.dyn, .rela.plt).
 
-Les octets des sections de même type sont concaténés dans .text, .data, etc. Les relocations, elles, sont lues, appliquées, puis jetées. Il ne reste dans l'exécutable que les relocations de chargement dynamique (.rela.dyn, .rela.plt).
+Le livre mélange les deux niveaux, ce qui prête à confusion : `s` désigne dans l'algorithme un morceau d'entrée, même s'il décrit ce qui deviendra une partie de l'agrégat.
 
-Le livre mélange les deux niveaux, ce qui prête à confusion : s désigne dans l'algorithme un morceau d'entrée, même s'il décrit ce qui deviendra une partie de l'agrégat.
+### Le modèle
+Le linker garde en mémoire chaque .o séparément (ses sections, ses symboles, ses relocations) comme un plan de mise en page.
 
-✻ Sautéed for 8s · done 11:47 PM
-
-❯ je pensais avoir compris que le linker agrégeait tout. En fait, ce n'est qu'à moitié vrai, il agrège tout, mais il garde en même temps les fichiers individuels ouverts et travaille en parallèle le fichier global et les fichiers individuels ? C'est pour ça que pour chaque module, et pour chaque section, et pour chaque relocation, il essaie de trouver l'adresse finale
-
-Oui, c'est l'idée, avec une nuance sur « en parallèle » : c'est séquentiel, en deux passe
-
-Le modèleLe linker garde en mémoire chaque .o séparément (ses sections, ses symboles, ses relocatigat » n'est pas un fichier construit d'abord : c'est surtout un plan de mise en page.Passe 1 : mise en page (phase 1)Pour chaque .o et chaque section d'entrée, le linker décide où elle ira dans l'agrégat :main.o .text → agrégat .text, offset 0x00   → ADDR = 0x401000sum.o  .text → agrégat .text, offset 0x30   → ADDR = 0x401030main.o .data → agrégat .data, offset 0x00   → ADDR = 0x404000Il en déduit ADDR(symbole) = ADDR(section d'entrée) + st_value. À ce stade, aucun octet da table.Passe 2 : copie et patch (phase 2)Il recopie les octets de chaque section d'entrée à sa place dans l'agrégat, et pour chaquit l'adresse calculée dans le trou. C'est ici que la triple boucle intervient : module,section, relocation.
-
-Pourquoi il faut garder les modules distincts
-
-Chaque relocation est exprimée relativement à son .o :
-- r.offset est un offset dans la section de ce .o,
-- l'index du symbole r.symbol pointe dans la .symtab de ce .o (qui peut être UND, donc ilinition dans un autre .o via la table globale des symboles).
-
-Sans le .o d'origine, ces informations n'ont plus de sens.
-
-Ce que vous aviez juste et ce qui est à ajuster
-
-- Juste : il agrège les octets, et il garde les fichiers individuels pour interpréter leurs relocations.
-- À ajuster : ce n'est pas « il essaie de trouver l'adresse finale » à chaque relocation. L'adresse finale est déjà connue quand la passe 2 commence. La boucle ne fait que la lire dans la table et l'écrire dans le trou. Le travail de calcul des adresses est entièrement fait en passe 1.
-(Le livre utilise R_X86_64_PC32 ; les linkers modernes émettent PLT32 pour les call, et le calcul est le même.)
-
-3. Comment se calcule l'addend ?
-
-L'addend est calculé par l'assembleur, pas par le linker. C'est une constante qui corrige l'écart entre :
-- l'adresse du trou (refaddr), à laquelle le CPU ne se réfère pas,
-- et la valeur de %rip utilisée par le CPU pour calculer le déplacement.
-
-En x86-64, un déplacement PC-relatif est calculé par rapport à l'adresse de l'instruction suivante, c'est-à-dire la fin du champ de 4 octets du trou (si l'instruction se termine par ce champ) :
-
-valeur voulue dans le trou = cible - (adresse du trou + 4)
-                           = cible + (-4) - adresse du trou
-1. Où sont les relocation entries ?
-
-Oui, dans chaque .o. Il y a une section de relocations par section à patcher :
-
-main.o
- ├─ .text         ← octets du code
- ├─ .rela.text    ← relocations qui s'appliquent à .text
- ├─ .data
- ├─ .rela.data    ← (présente seulement s'il y a des références à patcher dans .data)
- └─ .symtab
-
-Dans l'algorithme du livre, foreach section s parcourt donc les sections de chaque .o, et foreach relocation entry r parcourt la .rela.<s> correspondante. Un sum.o sans référence extérieure n'a pas de
-.rela.text.
-
-2. Exemple qui déroule la boucle
-
-Avec main.c et sum.c du dernier exemple, sur main.o (code compilé sans PIE, -fno-pie pour simplifier, et en ne gardant que la relocation PC-relative) :
-
-main:
-  0: sub  $8,%rsp
-  4: mov  $2,%esi
-  9: lea  array(%rip),%rdi     ← 48 8d 3d 00 00 00 00   (trou aux octets 0xc..0xf)
- 10: call sum                  ← e8 00 00 00 00         (trou aux octets 0x11..0x14)
-
-(Offsets approximatifs : vérifiez avec objdump -dr main.o.) readelf -r main.o donne :
-
-Offset  Type           Symbol  Addend
-0xc     R_X86_64_PC32  array   -4
-0x11    R_X86_64_PLT32 sum     -4
-
-Supposons que la phase 1 ait donné :
-
-ADDR(.text de main.o) = 0x401000     ADDR(array) = 0x404000
-ADDR(sum)             = 0x401030
-
-La boucle fait, pour s = .text, avec r = 2ᵉ entrée (sum) :
-
-refptr  = s + r.offset                 = pointeur sur le trou (octet 0x11 de .text)
-refaddr = ADDR(s) + r.offset           = 0x401000 + 0x11 = 0x401011
-*refptr = ADDR(sum) + r.addend - refaddr
-        = 0x401030 + (-4) - 0x401011   = 0x1b
-
-Le trou devient 1b 00 00 00, donc e8 1b 00 00 00.
-
-Pour la 1ʳᵉ entrée : refaddr = 0x40100c, *refptr = 0x404000 - 4 - 0x40100c = 0x2ff0.
-
-(Le livre utilise R_X86_64_PC32 ; les linkers modernes émettent PLT32 pour les call, et le calcul est le même.)
-
-3. Comment se calcule l'addend ?
-
-L'addend est calculé par l'assembleur, pas par le linker. C'est une constante qui corrige l'écart entre :
-- l'adresse du trou (refaddr), à laquelle le CPU ne se réfère pas,
-- et la valeur de %rip utilisée par le CPU pour calculer le déplacement.
-
-En x86-64, un déplacement PC-relatif est calculé par rapport à l'adresse de l'instruction suivante, c'est-à-dire la fin du champ de 4 octets du trou (si l'instruction se termine par ce champ) :
-
-valeur voulue dans le trou = cible - (adresse du trou + 4)
-                           = cible + (-4) - adresse du trou
-                                       ↑
-                                     addend
-
-Donc addend = -4 pour un call ou un lea dont le déplacement est le dernier champ de l'instruction. Si des octets suivent le déplacement dans l'instruction (par exemple cmpl $1, var(%rip) avec un immédiat de 1 octet après), l'addend vaut -5, et ainsi de suite : addend = -(nombre d'octets entre le début du trou et la fin de l'instruction).
-
-Pour une relocation absolue (hors du sujet ici), l'addend sert à autre chose : par exemple &array[1] donne addend = +4.
-
-✻ Churned for 15s · done 11:36 PM
-
-※ recap: Vous étudiez la phase de relocalisation du linker (CS:APP) pour comprendre le travrs ELF. Je viens d'expliquer où sont les relocation entries et comment l'addend secalcule. Prochaine étape : vérifier l'exemple avec `readelf -r main.o`. (disable recaps in /config)
-
-❯ je n'ai pas compris ce que font les deux boucles. Est-ce que s prend la valeur de chaque  ou bien les sections intermédiaires (.text, .text.fichier_b, .text.fichier_c, .data,.data.fichier_b, .data_fichier_c) ? Et la boucle sur les r, elle boucle sur quelles relocation entries ? Il n'y a qu'une seule table de relocation entries à ce moment, enfin deux, non ? .rel.text et .rel.data, tout est agrégé ? Donc chaque s boucle sur les mêmes r ?
-
-Votre intuition d'une table agrégée est fausse : les relocations ne sont jamais agrégées. Seul le contenu des sections (.text, .data) l'est.
-
-Sur quoi boucle s
-
-s parcourt les sections d'entrée, celles de chaque .o : la .text de main.o, la .text de s. Ce sont vos « sections intermédiaires » (la notation .text.fichier_b est la vôtre, çan'existe pas dans l'ELF : chaque .o a simplement sa propre section nommée .text).
-
-Le livre est elliptique : sa boucle est en fait imbriquée dans un parcours de tous les modules.
-
-foreach module m {
-  foreach section s de m {                  // .text de m, .data de m...
-    foreach relocation entry r de .rela.s de m {
-      ...
-    }
-  }
-}
-
-Sur quoi boucle r
-
-Pour une section s donnée, r ne parcourt que les entrées de la table de relocations de cea.text de main.o pour s = .text de main.o, et ainsi de suite. Deux s différents nebouclent donc jamais sur les mêmes r.
-
-main.o   .text  ──▶ .rela.text de main.o   (entrées : array, sum)
-main.o   .data  ──▶ .rela.data de main.o   (si elle existe)
-sum.o    .text  ──▶ .rela.text de sum.o    (absente ici)
-
-Pourquoi r.offset est cohérent
-
-Dans une entrée, r.offset est l'offset dans la section d'entrée à laquelle elle s'appliquo. C'est pourquoi la formule du livre écrit ADDR(s) + r.offset : ADDR(s) est l'adressefinale de cette section d'entrée (calculée en phase 1), pas celle de l'agrégat. Si les re les offsets deviendraient ambigus (offset 0x11 de quel fichier ?).
-
-Ce qui est agrégé dans l'exécutable final
-
-Les octets des sections de même type sont concaténés dans .text, .data, etc. Les relocatiuées, puis jetées. Il ne reste dans l'exécutable que les relocations de chargementdynamique (.rela.dyn, .rela.plt).
-
-Le livre mélange les deux niveaux, ce qui prête à confusion : s désigne dans l'algorithme un morceau d'entrée, même s'il décrit ce qui deviendra une partie de l'agrégat.
-
-✻ Sautéed for 8s · done 11:47 PM
-
-❯ je pensais avoir compris que le linker agrégeait tout. En fait, ce n'est qu'à moitié vrai, il agrège tout, mais il garde en même temps les fichiers individuels ouverts et travaille en parallèle le fichier global et les fichiers individuels ? C'est pour ça que pour chaque module, et pour chaque section, et pour chaque relocation, il essaie de trouver l'adresse finale
-
-Oui, c'est l'idée, avec une nuance sur « en parallèle » : c'est séquentiel, en deux passes.
-
-Le modèle
-
-Le linker garde en mémoire chaque .o séparément (ses sections, ses symboles, ses relocations) jusqu'à la fin. L'« agrégat » n'est pas un fichier construit d'abord : c'est surtout un plan de mise en page.
-
-Passe 1 : mise en page (phase 1)
+- **Passe 1 : mise en page (phase 1)**
 Pour chaque .o et chaque section d'entrée, le linker décide où elle ira dans l'agrégat :
+  - main.o .text -> agrégat .text, offset 0x00 -> ADDR = 0x401000
+  - sum.o  .text -> agrégat .text, offset 0x30 -> ADDR = 0x401030
+  - main.o .data -> agrégat .data, offset 0x00 -> ADDR = 0x404000
 
-main.o .text → agrégat .text, offset 0x00   → ADDR = 0x401000
-sum.o  .text → agrégat .text, offset 0x30   → ADDR = 0x401030
-main.o .data → agrégat .data, offset 0x00   → ADDR = 0x404000
+Il en déduit `ADDR(symbole) = ADDR(section d'entrée) + st_value`. À ce stade, aucun octet da table.
 
-Il en déduit ADDR(symbole) = ADDR(section d'entrée) + st_value. À ce stade, aucun octet de code n'a changé, c'est de la table.
+- **Passe 2 : copie et patch**
+Il recopie les octets de chaque section d'entrée à sa place dans l'agrégat, et pour chaque l'adresse calculée dans le trou.
+C'est ici que la triple boucle intervient : module, section, relocation.
 
-Passe 2 : copie et patch (phase 2)
-Il recopie les octets de chaque section d'entrée à sa place dans l'agrégat, et pour chaquit l'adresse calculée dans le trou. C'est ici que la triple boucle intervient : module,section, relocation.
+#### Pourquoi il faut garder les modules distincts
 
-Pourquoi il faut garder les modules distincts
+Chaque relocation est exprimée relativement à son `.o` :
+- `r.offset` est un offset dans la section de ce `.o`,
+- l'index du symbole `r.symbol` pointe dans la `.symtab` de ce `.o` (qui peut être `UND`, donc défini dans un autre `.o` via la table globale des symboles).
 
-Chaque relocation est exprimée relativement à son .o :
-- r.offset est un offset dans la section de ce .o,
-- l'index du symbole r.symbol pointe dans la .symtab de ce .o (qui peut être UND, donc ilinition dans un autre .o via la table globale des symboles).
+Sans le `.o` d'origine, ces informations n'ont plus de sens.
 
-Sans le .o d'origine, ces informations n'ont plus de sens.
+Le linker agrège les octets et garde les fichiers individuels pour interpréter les relocations. 
+L'adresse finale étant déjà connue quand la passe 2 commence, la boucle la lit dans la table et l'écrit dans le trou.
 
-Ce que vous aviez juste et ce qui est à ajuster
+Le travail de calcul des adresses est entièrement fait en passe 1.
 
-- Juste : il agrège les octets, et il garde les fichiers individuels pour interpréter leu
-- À ajuster : ce n'est pas « il essaie de trouver l'adresse finale » à chaque relocation.nnue quand la passe 2 commence. La boucle ne fait que la lire dans la table et l'écriredans le trou. Le travail de calcul des adresses est entièrement fait en passe 1.
+> Note: le livre utilise `R_X86_64_PC32`, mais les linkers modernes émettent `PLT32` pour les `call`. Le calcul ne change pas.
+
+### Comment se calcule `addend` ?
+
+L'addend est calculé par l'assembleur. C'est une constante qui corrige l'écart entre :
+- l'adresse du trou (`refaddr`), à laquelle le `CPU` ne se réfère pas,
+- la valeur de `%rip` utilisée par le `CPU` pour calculer le déplacement.
+
+En `x86-64`, un déplacement `PC-relatif` est calculé par rapport à l'adresse de l'instruction suivante, c'est-à-dire la fin du champ de 4 octets du trou (si l'instruction se termine par ce champ) :
+
+```
+valeur voulue dans le trou = cible - (adresse du trou + 4)
+                           = cible + (-4) - adresse du trou
+                                     addend
+```
+
+Donc `addend` = -4 pour un `call` ou un `lea` dont le déplacement est le dernier champ de l'instruction.
+
+Si des octets suivent le déplacement dans l'instruction (par exemple `cmpl $1, var(%rip)` avec un immédiat de 1 octet après), l'addend vaut -5, et ainsi de suite : `addend = -(nombre d'octets entre le début du trou et la fin de l'instruction)`.                            
+
+### Où sont les relocation entries ?
+
+Dans chaque `.o`. Il y a une section de relocations par section à patcher :
+
+```sh
+main.o
+ ├─ .text         # octets du code
+ ├─ .rela.text    # relocations qui s'appliquent à .text
+ ├─ .data
+ ├─ .rela.data    # (présente seulement s'il y a des références à patcher dans .data)
+ └─ .symtab
+```
+
+Dans l'algorithme du livre, `foreach section s` parcourt donc les sections de chaque `.o`, et `foreach relocation entry r` parcourt la `.rela.<s>` correspondante. Un `sum.o` sans référence extérieure n'a pas de `.rela.text`.
+
+### Relogement des références PC-relatif (exemple)
+
+```ss
+1  000000000000000 <main>:
+2     0:	48 83 ec 08          	sub    $0x8,%rsp
+3     4:	be 02 00 00 00       	mov    $0x2,%esi
+4     9:	bf 00 00 00 00       	mov    $0x0,%edi
+5  			a: R_X86_64_32	array
+6     e:	e8 00 00 00 00       	callq  13 <main+0x13>
+7  			f: R_X86_64_PC32	sum-0x4
+8    13:	48 83 c4 08          	add    $0x8,%rsp
+9    17:	c3                   	retq   
+```
+
+Soit la `relocation entry` correspante:
+
+```
+r.offset = 0xf
+r.symbol = sum
+r.type = R_X86_64_PC32
+r.addend = -4
+```
+
+En supposant que le linker a déterminé que : 
+
+```
+ADDR(s) = ADDR(.text) = 0x4004d0
+```
+et 
+```
+ADDR(s.symbol) = ADDR(sum) = 0x4004e8
+```
+
+Alors, en suivant l'algorithme, on obtient l'adresse `runtime` de la référence ligne 7 : 
+
+```
+refaddr = ADDR(s) + r.offset
+        = 0x4004d0 + 0xf
+        = 0x4004df
+```
+
+Cela permet de mettre à jour la référence de sorte qu'elle pointe vers `sum` au runtime, ligne 8:
+```
+*refptr = (unsigned) (ADDR(r.symbol)  + r.addend  - refaddr)
+        = (unsigned) (0x4004e8       + (-4)      - 0x4004df)
+        = (unsigned) (0x5)
+```
+
+Dans le fichier exécutable en sortie, l'instruction `call` contient la relocation suivante: 
+
+```
+4004de:	e8 05 00 00 00       	callq  4004e8 <sum>
+```
+
+### Relogement des références absolues (exemple)
+
+Elles sont directes.
+
+Par exemple, la ligne 4 contient l'instruction `mov` copie l'adresse de `array` (une valeur immédiate de 32 bits) dans `edi`.
+
+```
+9:	bf 00 00 00 00       	mov    $0x0,%edi
+```
+
+L'instruction `mov` commence à l'offset `0x9` et contient l'opcode de 1 octet `0xbf`, suivi d'une emplacement de 4 octets (32 bits) servant à référencer `array`.
+
+La `relocation entry` correspondante est la suivante:
+
+```
+r.offset = 0xa
+r.symbol = array
+r.type = R_X86_64_32
+r.addend = 0
+```
+
+Ces champs indiquent au linker qu'il doit modifier lar éférence absolue qui démarre à `0xa` de telle sorte qu'elle pointe à l'exécution sur le premier octet de `array`. 
+
+En supposant que le linker a déterminé que : 
+
+```
+ADDR(r.symbol) = ADDR(array) = 0x601018
+```
+
+Le linker met à jour la référence via l'algorithme:
+
+```
+*refptr = (unsigned) (ADDR(r.symbol)  + r.addend)
+        = (unsigned) (0x601018       + (0))
+        = (unsigned) (0x601018)
+```
+
+La ligne correspondante dans l'exécutable prend donc la forme :
+
+```sh
+4004d9: bf 18 10 60 00      mov   $0x601018,%edi  # %edi = &array
+```
+
+### Practice Problem 7.4
+
+A. What is the hex address of the relocated reference to sum in line 5?
+
+> 0x4004df
+
+B. What is the hex value of the relocated reference to sum in line 5?
+
+> 0x05
+
+### Practice Problem 7.5
+
+> Consider the call to function swap in object file `m.o` (Figure 7.5).
+>```sh
+> 9:  e8 00 00 00 00      callq e <main+0xe>    #swap()
+>```
+> with the following relocation entry:
+> ```
+> r.offset = 0xa
+> r.symbol = swap
+> r.type = R_X86_64_PC32
+> r.addend = -4
+> ```
+>
+> Now suppose that the linker relocates `.text` in `m.o` to address `0x4004d0` and `swap` to address `0x4004e8`. Then what is the value of the relocated reference to swap in the `callq` instruction?
+
+Réponse:
+
+```
+Soit
+
+ADDR(s) = ADDR(.text) = 0x4004d0
+
+et
+
+ADDR(r.symbol) = ADDR(swap) = 0x4004e8
+
+On a:
+
+refaddr = ADDR(s) + r.offset
+        = (ADDR(.text) + r.offset)
+        = (0x4004d0 + 0xa)
+        = (0x4004da)
+
+*refptr = (unsigned) (ADDR(r.symbol) + r.addend - refaddr)
+        = (unsigned) (0x4004e8 + (-4) - 0x4004da)
+        = (unsigned) (0xa)
+```
+
+> 4004d9:  e8 0a 00 00 00      callq e 0x4004e8 <swap>    #swap()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Votre intuition est bonne : tout ce schéma décrit l'espace d'adressage virtuel d'un processus. La question à se poser n'est donc pas « où le noyau se trouve-t-il en RAM ? » mais « pourquoi le noyau apparaît-il dans l'espace virtuel de chaque processus ? ».
+
+1. Le noyau est mappé dans l'espace virtuel de chaque processus
+
+Chaque processus a ses propres tables de pages. Linux y ajoute, dans la partie haute, les mêmes entrées pour tous les processus : elles pointent vers les mêmes pages physiques, qui contiennent le code et les données du noyau.
+
+- La partie basse (code, tas, pile…) est propre à chaque processus.
+- La partie haute (le noyau) est identique partout et partagée physiquement.
+
+La raison est pratique. Lors d'un appel système, d'une interruption ou d'un défaut de page, le CPU passe en mode noyau sans changer de tables de pages (pas de changement de CR3, pas de vidage du TLB). Le code du noyau est déjà présent à des adresses virtuelles valides. Il peut aussi lire directement les tampons de l'utilisateur, par exemple pour un read(fd, buf, n), puisque les deux zones sont dans le même espace.
+
+2. Pourquoi c'est « invisible au code utilisateur »
+
+Chaque entrée de table de pages contient un bit U/S (User/Supervisor). Les pages du noyau sont marquées supervisor only. Si un programme en mode utilisateur (ring 3) tente d'y accéder, le MMU lève une faute de protection et le processus reçoit un segfault. Ces pages sont donc bien mappées, mais inaccessibles depuis le code utilisateur.
+
+3. La simplification du « 2^48 »
+
+En x86-64 avec des adresses virtuelles sur 48 bits, une adresse doit être canonique : les bits 63 à 47 doivent tous être égaux. Il existe donc deux zones valides :
+
+0x0000000000000000 – 0x00007FFFFFFFFFFF   → espace utilisateur (128 Tio)
+        [ trou non canonique, inutilisable ]
+0xFFFF800000000000 – 0xFFFFFFFFFFFFFFFF   → espace noyau (128 Tio)
+
+Le noyau ne commence donc pas réellement à l'adresse 2^48. Il occupe la « moitié haute » de l'espace, en adresses canoniques. Le livre montre seulement qu'il se trouve au-dessus de la plus grande adresse utilisateur légale. Avec la pagination à 5 niveaux (adresses sur 57 bits), le principe reste le même, seules les bornes changent.
+
+4. Une nuance moderne : KPTI
+
+Depuis la faille Meltdown (2018), Linux active souvent le KPTI (Kernel Page-Table Isolation). Chaque processus a alors deux jeux de tables de pages :
+- en mode utilisateur, le noyau est presque entièrement retiré du mappage, sauf un petit « trampoline » pour entrer dans le noyau ;
+- en mode noyau, on bascule vers des tables où tout le noyau est mappé.
+
+Le modèle du livre reste valable sur le plan conceptuel, mais cette isolation est aujourd'hui plus stricte que le simple bit U/S.
+
+Le chapitre 9.7 (Figure 9.26, « The virtual memory of a Linux process ») reprend ce point en détail. Il montre notamment que la zone noyau contient une partie identique pour tous les processus et une partie propre à chacun : ses structures, sa pile noyau, etc.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Les deux approches chargent une bibliothèque dynamique. Ce qui les distingue, c'est le moment où le choix de la bibliothèque est fait.
+
+Votre cas habituel : liaison dynamique au chargement
+
+gcc -o prog main.c -L. -lvector
+
+- Le .h ne fournit que les déclarations, pour que le compilateur sache comment appeler addvec.
+- Au moment de l'édition de liens, ld vérifie que addvec existe dans libvector.so. Il écrit ensuite dans l'exécutable une dépendance (DT_NEEDED: libvector.so) et crée une entrée PLT/GOT.
+- Au lancement, ld-linux.so charge obligatoirement libvector.so avant main. Si le fichier est absent, le programme ne démarre pas du tout (error while loading shared libraries).
+
+Le nom de la bibliothèque et le nom des fonctions sont donc figés au moment de la compilation. C'est ce qui se passe avec printf et la libc, et c'est le bon choix dans 95 % des cas.
+
+dlopen/dlsym : liaison pendant l'exécution
+
+On ne fait pas -lvector : l'exécutable ignore tout de libvector.so. C'est le programme lui-même qui décide, pendant qu'il tourne, quel fichier ouvrir et quel symbole chercher. Le chemin et le nom du symbole ne sont que des chaînes de caractères, qui peuvent venir d'un fichier de configuration, d'un répertoire, de l'utilisateur…
+
+Cela sert quand on ne peut pas ou ne veut pas connaître la bibliothèque au moment de compiler :
+
+1. Plugins. Le programme parcourt un dossier plugins/, fait dlopen sur chaque .so trouvé, puis dlsym(h, "plugin_init"). Des tiers peuvent écrire des plugins des années après la compilation du programme. Exemples : modules Apache/nginx, filtres GIMP, plugins VLC/GStreamer, modules PAM.
+2. Choix d'une implémentation à l'exécution. Les chargeurs OpenGL/Vulkan, par exemple, ouvrent le pilote NVIDIA, AMD ou Intel selon le matériel présent. La glibc elle-même utilise dlopen pour NSS (libnss_files.so, libnss_ldap.so…) selon /etc/nsswitch.conf.
+3. Dépendances optionnelles. « Si libcuda.so est présente, j'utilise le GPU, sinon je calcule sur le CPU. » Avec -lcuda, le programme refuserait de démarrer sur une machine sans CUDA.
+4. Interpréteurs et FFI. Quand Python fait import numpy, il charge _multiarray_umath.so avec dlopen. Avec ctypes.CDLL("libfoo.so"), c'est encore dlopen/dlsym : l'interpréteur a été compilé bien avant votre module.
+5. Rechargement à chaud. Un serveur ou un moteur de jeu peut faire dlclose, recompiler le .so, puis refaire dlopen sans redémarrer. Le livre cite d'ailleurs l'exemple des serveurs web qui mettent à jour leurs fonctions sans s'arrêter.
+6. Démarrage plus rapide. On ne charge une grosse bibliothèque que si la fonctionnalité qui l'utilise est effectivement demandée.
+
+En résumé
+
+┌──────────────────────┬──────────────────────────────────────┬───────────────────────────────────────┐
+│                      │            -lvector + .h             │             dlopen/dlsym              │
+├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ Bibliothèque connue  │ à la compilation                     │ à l'exécution                         │
+├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ Bibliothèque absente │ le programme ne démarre pas          │ vous gérez l'erreur (dlerror)         │
+├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ Appel                │ addvec(...) directement (via la PLT) │ via un pointeur de fonction           │
+├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ Usage typique        │ dépendances normales                 │ plugins, pilotes, extensions, options │
+└──────────────────────┴──────────────────────────────────────┴───────────────────────────────────────┘
+
+Pour votre propre libvector.so, utilisée par votre propre programme, il n'y a aucune raison de passer par dlopen : le .h et -lvector suffisent. Le livre montre dlopen sur ce petit exemple uniquement pour présenter l'interface. Son intérêt réel apparaît quand le programme qui charge la bibliothèque et la bibliothèque chargée sont écrits indépendamment l'un de l'autre.
+
+Le flag -rdynamic sert justement à ce scénario de plugins. Il exporte les symboles de l'exécutable pour que les .so chargés puissent, eux aussi, appeler des fonctions du programme hôte.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Dans l'ensemble c'est juste. Quelques corrections :
+
+1. La GOT ne contient pas de code, seulement des adresses. Au départ, GOT[4] contient l'adresse de la 2e instruction de PLT[2]. C'est ce « renvoi » que tu décris, mais c'est une simple adresse, pas un code de démarrage.
+2. Le linker n'est pas appelé à chaque appel. Le programme appelle PLT[2], l'entrée propre à addvec (ce n'est pas une entrée générique). PLT[2] fait jmp *GOT[4], c'est-à-dire qu'il saute à l'adresse stockée dans GOT[4]. Il n'« appelle » pas l'entrée de la GOT. Après le premier appel, ce saut mène directement à addvec et le linker n'intervient plus du tout.
+3. .dynamic n'est pas du code, c'est une section de données de l'exécutable. Elle sert de fiche technique au linker : quelles bibliothèques charger, et où se trouvent la table des symboles et la table de relocation. GOT[0] contient son adresse. Le linker, lui, est le code de ld-linux.so.
+4. Ce que fait PLT[0] : il empile GOT[1], qui identifie le programme pour le linker, puis saute à l'adresse contenue dans GOT[2]. Cette adresse est le point d'entrée du linker, _dl_runtime_resolve.
+5. Le « travail » que tu ne comprends pas bien :
+   - avec l'indice empilé, le linker lit l'entrée correspondante de .rela.plt, qui lui donne le nom du symbole (addvec) et la case de la GOT à remplir (GOT[4]) ;
+   - il cherche addvec dans les tables de symboles des bibliothèques chargées ;
+   - il écrit l'adresse trouvée dans GOT[4] ;
+   - il saute à addvec, si bien que le premier appel aboutit lui aussi.
+
+Détail de vocabulaire : la GOT est dans la section .got.plt et non dans .data, mais les deux font partie du segment de données, modifiable. La PLT est dans la section .plt, qui fait partie du segment de code.
+
+C'est l'éditeur de liens statique (ld) qui crée la PLT et la GOT, au moment de produire l'exécutable. Il y écrit :
+- tout le code de la PLT ;
+- les valeurs initiales de la GOT : GOT[0] reçoit l'adresse de .dynamic, et GOT[3] et suivantes reçoivent les adresses des pushq de la PLT ;
+- la table .rela.plt, que le linker dynamique utilisera.
+
+Deux cases restent vides jusqu'au lancement du programme : GOT[1] et GOT[2]. Le linker dynamique les remplit au chargement, puisque son adresse n'est pas connue avant.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Pas tout à fait. Ce n'est pas le compilateur qui fait ce travail mais l'éditeur de liens. Et il ne lit pas les deux noms comme malloc : il fait deux redirections en sens opposés.
+
+Avec -Wl,--wrap,malloc :
+- un appel à malloc (par exemple dans int.c) est relié à __wrap_malloc, ton wrapper ;
+- un appel à __real_malloc (dans le wrapper) est relié à malloc, celui de la libc.
+
+Résultat : int.c → __wrap_malloc → __real_malloc, qui est en réalité le malloc de la libc.
+
+Le compilateur ne voit rien de tout ça. Il compile int.c avec un appel à malloc tout à fait normal, et mymalloc.c avec un appel à une fonction __real_malloc qui n'est définie nulle part. Les redirections n'ont lieu qu'à l'édition des liens, dont la commande finale ressemble à ceci :
+
+gcc -Wl,--wrap,malloc -Wl,--wrap,free -o intl int.o mymalloc.o
+
+✻ Crunched for 10s · done 6:33 PM
+
+❯ Quel est le mécanisme ? Je comprends qu'en écrivant -Wl,--wrap,malloc, je lie toutes les écritures de malloc() à __wrap_malloc, mais pourquoi __real_malloc est-il bien interprété ? C'est une convention du compilateur ? __wrap et __real sont déjà prévus ?
+
+Oui, c'est une convention, mais celle de l'éditeur de liens (ld) et non du compilateur. Les préfixes __wrap_ et __real_ sont codés en dur dans l'option --wrap.
+
+Le mécanisme :
+
+1. Compilation. gcc -c mymalloc.c produit mymalloc.o. Le compilateur ne connaît pas __real_malloc : il le traite comme une fonction externe quelconque et l'inscrit dans la table des symboles comme symbole non défini, comme il le ferait pour printf.
+2. Édition des liens. Avec --wrap malloc, ld applique deux règles chaque fois qu'il doit résoudre un symbole non défini :
+   - si le nom est malloc, il le relie à __wrap_malloc ;
+   - si le nom est __real_malloc, il le relie à malloc.
+
+Une seule option active donc les deux règles. __real_malloc n'existe nulle part en tant que fonction : c'est juste un nom réservé que ld reconnaît et redirige.
