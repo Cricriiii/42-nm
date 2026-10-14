@@ -640,183 +640,211 @@ refaddr = ADDR(s) + r.offset
 
 > 4004d9:  e8 0a 00 00 00      callq e 0x4004e8 <swap>    #swap()
 
+## Fichiers objets exécutables
 
+Après avoir été fusionné par le linker, un programme au format ELF ressemble à :
 
+![Typical ELF executable object file](/.notes/Figure_7.13_-_Typical_ELF_executable_object_file.png)
 
+Le format d'un objet exécutable est similaire à celui d'un objet relogeable.
 
+### Sections
 
+Le `ELF header` décrit l'ensemble du format du fichier. Il inclut le point d'entrée du programme, c'est-à-dire de la première instruction exécutée.
 
+Les sections `.text`, `.rodata` et `.data` sont similaires à celles d'un fichier relogeable, à ceci près qu'elles ont été relogées dans leur emplacement définitif.
 
+La section `.init` définit une petite fonction appelée `_init`, qui servira à initialiser le code.
 
+Puisque l'exécutable est entièrement lié (`fully linked`, c'est-à-dire relogé), aucune section `.rel` n'est nécessaire.
 
 
+#### `Objdump` et `readelf`
 
+Les fichiers ELF sont conçus pour être chargés facilement en mémoire, avec des blocs contigus placés dans des zones de mémoire contigus.
 
+Ci-après un extrait d'une `program header table`.
 
+```sh
+$ objdump -p ./prog
 
+# [...] C'est la program header table
+    LOAD off    0x0000000000000000 vaddr 0x0000000000400000 paddr 0x0000000000400000 align 2**21
+         filesz 0x000000000000069c memsz 0x000000000000069c flags r-x
+    LOAD off    0x0000000000000df8 vaddr 0x0000000000600df8 paddr 0x0000000000600df8 align 2**21
+         filesz 0x0000000000000228 memsz 0x0000000000000230 flags rw-
+# [...]
 
+$ readelf -SW ./prog
+There are 30 section headers, starting at offset 0x36f0:
 
+Section Headers:
+  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+  [ 1] .note.gnu.property NOTE            0000000000000350 000350 000020 00   A  0   0  8
+  [ 2] .note.gnu.build-id NOTE            0000000000000370 000370 000024 00   A  0   0  4
+  [ 3] .interp           PROGBITS        0000000000000394 000394 00001c 00   A  0   0  1
+  [ 4] .gnu.hash         GNU_HASH        00000000000003b0 0003b0 000024 00   A  5   0  8
+  [ 5] .dynsym           DYNSYM          00000000000003d8 0003d8 000090 18   A  6   1  8
+  [ 6] .dynstr           STRTAB          0000000000000468 000468 000088 00   A  0   0  1
+  [ 7] .gnu.version      VERSYM          00000000000004f0 0004f0 00000c 02   A  5   0  2
+  [ 8] .gnu.version_r    VERNEED         0000000000000500 000500 000030 00   A  6   1  8
+  [ 9] .rela.dyn         RELA            0000000000000530 000530 0000c0 18   A  5   0  8
+  [10] .init             PROGBITS        0000000000001000 001000 000017 00  AX  0   0  4
+  [11] .plt              PROGBITS        0000000000001020 001020 000010 10  AX  0   0 16
+  [12] .plt.got          PROGBITS        0000000000001030 001030 000008 08  AX  0   0  8
+  [13] .text             PROGBITS        0000000000001040 001040 000140 00  AX  0   0 16
+  [14] .fini             PROGBITS        0000000000001180 001180 000009 00  AX  0   0  4
+  [15] .rodata           PROGBITS        0000000000002000 002000 000004 04  AM  0   0  4
+  [16] .eh_frame_hdr     PROGBITS        0000000000002004 002004 00003c 00   A  0   0  4
+  [17] .eh_frame         PROGBITS        0000000000002040 002040 0000d0 00   A  0   0  8
+  [18] .note.ABI-tag     NOTE            0000000000002110 002110 000020 00   A  0   0  4
+  [19] .init_array       INIT_ARRAY      0000000000003e00 002e00 000008 08  WA  0   0  8
+  [20] .fini_array       FINI_ARRAY      0000000000003e08 002e08 000008 08  WA  0   0  8
+  [21] .dynamic          DYNAMIC         0000000000003e10 002e10 0001b0 10  WA  6   0  8
+  [22] .got              PROGBITS        0000000000003fc0 002fc0 000028 08  WA  0   0  8
+  [23] .got.plt          PROGBITS        0000000000003fe8 002fe8 000018 08  WA  0   0  8
+  [24] .data             PROGBITS        0000000000004000 003000 000018 00  WA  0   0  8
+  [25] .bss              NOBITS          0000000000004018 003018 000008 00  WA  0   0  4
+  [26] .comment          PROGBITS        0000000000000000 003018 00001f 01  MS  0   0  1
+  [27] .symtab           SYMTAB          0000000000000000 003038 0003c0 18     28  21  8
+  [28] .strtab           STRTAB          0000000000000000 0033f8 0001e3 00      0   0  1
+  [29] .shstrtab         STRTAB          0000000000000000 0035db 000110 00      0   0  1
+```
 
+On peut y lire que deux segments mémoire vont être initialisés avec le contenu du fichier exécutable:
+- Lignes 1 et 2: Le premier segment a les permissions `R-X`, démarre à l'adresse 0x400000, a une taille totale de 0x69c octets et est initialisé avec les 0x69c premiers octets du fichier exécutable, c'est-à-dire le `ELF header`, le `program header table`, et les sections `.init`, `.text` et `.rodata`.
+- Lignes 3 et 4: Le second segment (le segment `data`) a les permissions `RW-`, démarre à l'adresse mémoire 0x600df8, a une taille totale en mémoire de 0x230 octets, et est initialisé avec les 0x228 octets de la section `.data` à partir de l'offset `0xdf8`. Les 8 octets manquants (0x230 - 0x228 = 0x8) correspondent à la section `.bss`, initialisée à 0 au moment de l'exécution.
 
+> On notera dans la sortie de `objdump` que pour tout segment `s`, le linker  doit choisir une adresse de départ `vaddr ` de telle sorte que:
+>
+>                             vadr mod align = off mod align
 
 
 
+### Charger un fichier exécutable
 
+Tout programme peut invoquer le `loader` via `execve`, ou en appelant un programme via ligne de commande:
 
+```sh
+$ ./prog
+```
 
+Puisqu'il ne s'agit pas d'un `built-in`, le shell considère qu'il s'agit d'un exécutable et appelle le `loader`.
 
+Dans les systèmes Linux sans PIC, le segment du code commence à l'adresse 0x400000.
 
+![Linux x86-64 run-time memory image](/.notes/Figure_7.15_-_Linux_x86_runtime_memory_image.png)
 
 
+Lorsque le `loader` est exécuté, il crée en mémoire une image similaire à celle-ci. Grâce à la `program header table`, il copie l'exécutable dans les segments data et code.
 
+Le `loader` saute ensuite à l'`entry point` du programme, qui est toujours l'adresse de la fonction `_start`. Cette fonction est définie par le fichier objet `ctr1.o`, et est identique pour tous les programmes C. La fonction `_start` appelle la `system startup function` appelée `__libc_start_main`, définie dans `libc.so`. Elle initialise l'environnement d'exécution, appelle la fonction `main` de l'utilisateur et gère sa valeur de retour. Si nécessaire, elle rend le contrôle au kernel.
 
 
+## Liaison des librairies partagées
 
+Les librairies partagées peuvent chargées en mémoire aussi bien à l'étape de liaison que durant l'exécution à un emplacement mémoire arbitraire, et liées à un programme en mémoire. Ce processus s'appelle `dynamic linking` et est exécuté par un `dynamic linker`.
 
+Ce sont les fichiers `.so` pour `shared object`, ou sous Windows `.dll` pour `dynamic link librairies`.
 
+Par exemple, pour construire la librairie partagée `libvector.so`, on appellera le compilateur ainsi:
 
+```sh
+$ gcc -shared -fpic -o libvector.so addvec.c multvec.c
+```
 
+Qu'on utilisera ainsi:
 
+```sh
+$ gcc -o prog main.c ./libvector.so
+```
 
+Lorsque le `loader` charge l'exécutable `prog`, il charge la partie liée partiellement, puis il remarque que l'exécutable contient une section `.interp`, qui contient le chemin du `dynamic linker` (`ld-linux.so`), qui lui-même est un objet partagé. Au lieu de donner le contrôle à l'appplication, il charge et appelle le `dynamic linker`, dont le rôle est de terminer la liaison:
+- Reloger le code et les données de `libc.so`
+- Reloger le code et les données de `libvector.so`
+- Reloger toute référence dans `prog` aux symboles définis par `libc.so` et `libvector.so`
 
+Enfin, le `dynamic linker` donne le contrôle à l'application.
 
 
+### Charger et lier les librairies partagées au runtime
 
+Quelques fonctions:
 
+```c
+#include <dlfcn.h>
 
+void *dlopen(const char *filename, int flag);
+        // Returns: pointer to handle if OK, NULL on error
 
+void *dlsym(void *handle, char *symbol);
+        // Returns: pointer to symbol if OK, NULL on error
 
+int dlclose (void *handle);
+        // Returns: 0 if OK, −1 on error
 
+const char *dlerror(void);
+        // Returns: error message if previous call to dlopen, dlsym, or dlclose failed;
+        // NULL if previous call was OK
+```
 
+L'invocation serait la suivante:
 
+```sh
+$ gcc -rdynamic -o prog2r dll.c -ldl
+```
 
+## Position-Independent Code (PIC)
 
+Un code capable d'être chargé n'importe où en mémoire sans retravail du `linker` s'appelle `position-independant code`. L'option de compilation est `-fpic`. Les librairies partagées doivent toujours être compilées avec cette option.
 
+Les références aux symboles au sein d'un même exécutable n'ont pas besoin de traitement particulier pour être `PIC`. En revanche, les références aux symboles externes, oui.
 
+### Références aux data PIC
 
+Les compilateurs génèrent des références PIC aux variables globales en exploitant un fait important: **peu importe où le module objet est chargé en mémoire, son segment de données est toujours à la même distance de son segment de code**.
 
+> Par conséquent, la distance entre n'importe quelle instruction du segment de code et n'importe quelle variable du segment données est toujours identique à l'exécution.
 
+La `global offset table` sert exactement à tirer partie de cette propriété.
 
+### GOT - `Global Offset Table`
 
+Il s'agit d'un tableau contenant une entrée de 8 octets pour chaque objet global référencé dans le module objet, variable ou fonction. Chaque module qui référence des objets globaux a sa propre GOT.
 
-Votre intuition est bonne : tout ce schéma décrit l'espace d'adressage virtuel d'un processus. La question à se poser n'est donc pas « où le noyau se trouve-t-il en RAM ? » mais « pourquoi le noyau apparaît-il dans l'espace virtuel de chaque processus ? ».
 
-1. Le noyau est mappé dans l'espace virtuel de chaque processus
+### Appel de fonctions PIC
 
-Chaque processus a ses propres tables de pages. Linux y ajoute, dans la partie haute, les mêmes entrées pour tous les processus : elles pointent vers les mêmes pages physiques, qui contiennent le code et les données du noyau.
+L'appel de fonctions PIC est articulé entre la `global offset table` (GOT) et la `procedure linkage table` (PLT).
 
-- La partie basse (code, tas, pile…) est propre à chaque processus.
-- La partie haute (le noyau) est identique partout et partagée physiquement.
+La GOT est dans la section .got.plt et non dans .data, mais les deux font partie du segment de données, modifiable. La PLT est dans la section .plt, qui fait partie du segment de code.
 
-La raison est pratique. Lors d'un appel système, d'une interruption ou d'un défaut de page, le CPU passe en mode noyau sans changer de tables de pages (pas de changement de CR3, pas de vidage du TLB). Le code du noyau est déjà présent à des adresses virtuelles valides. Il peut aussi lire directement les tampons de l'utilisateur, par exemple pour un read(fd, buf, n), puisque les deux zones sont dans le même espace.
+On a:
+- `process linkage table`: c'est un tableau d'entrée de 16 octets. `PLT[0]` et `PLT[1]` sont des entrées particulières. Les entrées suivantes correspondent aux fonctions appelées par l'utilisateur. Chaque entrée de la PLT est responsable de l'appel d'une fonction donnée.
 
-2. Pourquoi c'est « invisible au code utilisateur »
+- `global offset table`: c'est un tableau d'adresses de 8 octets. GOT[0] à GOT[3] sont des entrées particulières. A partir de GOT[4], les entrées correspondent aux fonctions dont les adresses doivent être résolues au runtime.
 
-Chaque entrée de table de pages contient un bit U/S (User/Supervisor). Les pages du noyau sont marquées supervisor only. Si un programme en mode utilisateur (ring 3) tente d'y accéder, le MMU lève une faute de protection et le processus reçoit un segfault. Ces pages sont donc bien mappées, mais inaccessibles depuis le code utilisateur.
 
-3. La simplification du « 2^48 »
+Plus précisément:
 
-En x86-64 avec des adresses virtuelles sur 48 bits, une adresse doit être canonique : les bits 63 à 47 doivent tous être égaux. Il existe donc deux zones valides :
+|PLT|Rôle|
+|:---:|:---|
+|0|Appel du linker dynamique|
+|1|Appel de la `system startup function`, soit `__libc_start_main`, qui initialise l'environnement, appelle la fonction `main` et retourne sa valeur de retour|
+|2|Appelle la première fonction utilisateur|
+|||
 
-0x0000000000000000 – 0x00007FFFFFFFFFFF   → espace utilisateur (128 Tio)
-        [ trou non canonique, inutilisable ]
-0xFFFF800000000000 – 0xFFFFFFFFFFFFFFFF   → espace noyau (128 Tio)
+Et,
 
-Le noyau ne commence donc pas réellement à l'adresse 2^48. Il occupe la « moitié haute » de l'espace, en adresses canoniques. Le livre montre seulement qu'il se trouve au-dessus de la plus grande adresse utilisateur légale. Avec la pagination à 5 niveaux (adresses sur 57 bits), le principe reste le même, seules les bornes changent.
-
-4. Une nuance moderne : KPTI
-
-Depuis la faille Meltdown (2018), Linux active souvent le KPTI (Kernel Page-Table Isolation). Chaque processus a alors deux jeux de tables de pages :
-- en mode utilisateur, le noyau est presque entièrement retiré du mappage, sauf un petit « trampoline » pour entrer dans le noyau ;
-- en mode noyau, on bascule vers des tables où tout le noyau est mappé.
-
-Le modèle du livre reste valable sur le plan conceptuel, mais cette isolation est aujourd'hui plus stricte que le simple bit U/S.
-
-Le chapitre 9.7 (Figure 9.26, « The virtual memory of a Linux process ») reprend ce point en détail. Il montre notamment que la zone noyau contient une partie identique pour tous les processus et une partie propre à chacun : ses structures, sa pile noyau, etc.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Les deux approches chargent une bibliothèque dynamique. Ce qui les distingue, c'est le moment où le choix de la bibliothèque est fait.
-
-Votre cas habituel : liaison dynamique au chargement
-
-gcc -o prog main.c -L. -lvector
-
-- Le .h ne fournit que les déclarations, pour que le compilateur sache comment appeler addvec.
-- Au moment de l'édition de liens, ld vérifie que addvec existe dans libvector.so. Il écrit ensuite dans l'exécutable une dépendance (DT_NEEDED: libvector.so) et crée une entrée PLT/GOT.
-- Au lancement, ld-linux.so charge obligatoirement libvector.so avant main. Si le fichier est absent, le programme ne démarre pas du tout (error while loading shared libraries).
-
-Le nom de la bibliothèque et le nom des fonctions sont donc figés au moment de la compilation. C'est ce qui se passe avec printf et la libc, et c'est le bon choix dans 95 % des cas.
-
-dlopen/dlsym : liaison pendant l'exécution
-
-On ne fait pas -lvector : l'exécutable ignore tout de libvector.so. C'est le programme lui-même qui décide, pendant qu'il tourne, quel fichier ouvrir et quel symbole chercher. Le chemin et le nom du symbole ne sont que des chaînes de caractères, qui peuvent venir d'un fichier de configuration, d'un répertoire, de l'utilisateur…
-
-Cela sert quand on ne peut pas ou ne veut pas connaître la bibliothèque au moment de compiler :
-
-1. Plugins. Le programme parcourt un dossier plugins/, fait dlopen sur chaque .so trouvé, puis dlsym(h, "plugin_init"). Des tiers peuvent écrire des plugins des années après la compilation du programme. Exemples : modules Apache/nginx, filtres GIMP, plugins VLC/GStreamer, modules PAM.
-2. Choix d'une implémentation à l'exécution. Les chargeurs OpenGL/Vulkan, par exemple, ouvrent le pilote NVIDIA, AMD ou Intel selon le matériel présent. La glibc elle-même utilise dlopen pour NSS (libnss_files.so, libnss_ldap.so…) selon /etc/nsswitch.conf.
-3. Dépendances optionnelles. « Si libcuda.so est présente, j'utilise le GPU, sinon je calcule sur le CPU. » Avec -lcuda, le programme refuserait de démarrer sur une machine sans CUDA.
-4. Interpréteurs et FFI. Quand Python fait import numpy, il charge _multiarray_umath.so avec dlopen. Avec ctypes.CDLL("libfoo.so"), c'est encore dlopen/dlsym : l'interpréteur a été compilé bien avant votre module.
-5. Rechargement à chaud. Un serveur ou un moteur de jeu peut faire dlclose, recompiler le .so, puis refaire dlopen sans redémarrer. Le livre cite d'ailleurs l'exemple des serveurs web qui mettent à jour leurs fonctions sans s'arrêter.
-6. Démarrage plus rapide. On ne charge une grosse bibliothèque que si la fonctionnalité qui l'utilise est effectivement demandée.
-
-En résumé
-
-┌──────────────────────┬──────────────────────────────────────┬───────────────────────────────────────┐
-│                      │            -lvector + .h             │             dlopen/dlsym              │
-├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
-│ Bibliothèque connue  │ à la compilation                     │ à l'exécution                         │
-├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
-│ Bibliothèque absente │ le programme ne démarre pas          │ vous gérez l'erreur (dlerror)         │
-├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
-│ Appel                │ addvec(...) directement (via la PLT) │ via un pointeur de fonction           │
-├──────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
-│ Usage typique        │ dépendances normales                 │ plugins, pilotes, extensions, options │
-└──────────────────────┴──────────────────────────────────────┴───────────────────────────────────────┘
-
-Pour votre propre libvector.so, utilisée par votre propre programme, il n'y a aucune raison de passer par dlopen : le .h et -lvector suffisent. Le livre montre dlopen sur ce petit exemple uniquement pour présenter l'interface. Son intérêt réel apparaît quand le programme qui charge la bibliothèque et la bibliothèque chargée sont écrits indépendamment l'un de l'autre.
-
-Le flag -rdynamic sert justement à ce scénario de plugins. Il exporte les symboles de l'exécutable pour que les .so chargés puissent, eux aussi, appeler des fonctions du programme hôte.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Dans l'ensemble c'est juste. Quelques corrections :
-
-1. La GOT ne contient pas de code, seulement des adresses. Au départ, GOT[4] contient l'adresse de la 2e instruction de PLT[2]. C'est ce « renvoi » que tu décris, mais c'est une simple adresse, pas un code de démarrage.
-2. Le linker n'est pas appelé à chaque appel. Le programme appelle PLT[2], l'entrée propre à addvec (ce n'est pas une entrée générique). PLT[2] fait jmp *GOT[4], c'est-à-dire qu'il saute à l'adresse stockée dans GOT[4]. Il n'« appelle » pas l'entrée de la GOT. Après le premier appel, ce saut mène directement à addvec et le linker n'intervient plus du tout.
-3. .dynamic n'est pas du code, c'est une section de données de l'exécutable. Elle sert de fiche technique au linker : quelles bibliothèques charger, et où se trouvent la table des symboles et la table de relocation. GOT[0] contient son adresse. Le linker, lui, est le code de ld-linux.so.
-4. Ce que fait PLT[0] : il empile GOT[1], qui identifie le programme pour le linker, puis saute à l'adresse contenue dans GOT[2]. Cette adresse est le point d'entrée du linker, _dl_runtime_resolve.
-5. Le « travail » que tu ne comprends pas bien :
-   - avec l'indice empilé, le linker lit l'entrée correspondante de .rela.plt, qui lui donne le nom du symbole (addvec) et la case de la GOT à remplir (GOT[4]) ;
-   - il cherche addvec dans les tables de symboles des bibliothèques chargées ;
-   - il écrit l'adresse trouvée dans GOT[4] ;
-   - il saute à addvec, si bien que le premier appel aboutit lui aussi.
-
-Détail de vocabulaire : la GOT est dans la section .got.plt et non dans .data, mais les deux font partie du segment de données, modifiable. La PLT est dans la section .plt, qui fait partie du segment de code.
+|GOT|Rôle|
+|:---:|:---|
+|0|Adresse de `.dynamic` (section de données de l'exécutable au profit du linker: quelles bibliothèques charger, emplacement des tables de symboles et de relocation)|
+|1|Adresse des `relocation entries`|
+|2|Adresse du `dynamic linker`|
+|3|sys startup|
+|4|Première fonction utilisateur, dans l'ordre de la `PLT`|
+|||
 
 C'est l'éditeur de liens statique (ld) qui crée la PLT et la GOT, au moment de produire l'exécutable. Il y écrit :
 - tout le code de la PLT ;
@@ -825,56 +853,30 @@ C'est l'éditeur de liens statique (ld) qui crée la PLT et la GOT, au moment de
 
 Deux cases restent vides jusqu'au lancement du programme : GOT[1] et GOT[2]. Le linker dynamique les remplit au chargement, puisque son adresse n'est pas connue avant.
 
+#### Principe
 
+Conceptuellement, la GOT et la PLT ont deux rôles très distincts:
+- La GOT contient l'annuaire des fonctions partagées
+- La PLT contient les mécanismes pour appeler les fonctions partagées, via la GOT. Chaque fonction a son propre mécanisme.
 
+Ainsi, lorsqu'un exécutable appelle une fonction partagée, il faut distinguer deux moments:
+- Le premier appel
+- Tous les autres appels
 
+Dans tous les cas, le point d'entrée est `PLT[2]`.
+Le programme appelle la fonction cible via `PLT[2]`, dont la première instruction est de sauter à l'entrée GOT correspondante. 
 
+##### Tous les autres appels
 
+Dans l'emplacement GOT correspondant, l'adresse de la fonction est chargée, le programme saute à cette adresse. Fin.
 
+##### Appel initial
 
+Dans l'emplacement GOT correspondant, a été préchargée par le `linker` l'adresse de l'instruction suivante de `PLT[2]`. En d'autres termes, le code de `PLT[2] s'exécute comme s'il n'était jamais allée dans l'entrée `GOT` correspondante.
 
+`PLT[2]` pousse sur la `stack` l'index de la fonction à rechercher, puis appelle `PLT[0]`.
 
+`PLT[0]` pousse un argument sur la `stack` à destination du `dynamic linker` à partir de `GOT[1]` et saute à l'adresse du linker dynamique située en `GOT[2]`. Le `dynamic linker` détermine alors l'adresse de la fonction cible et l'écrit dans la case `GOT` correspondante, puis l'appelle.
 
+![GOT-PLT](/.notes/GOT_PLT.png)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Pas tout à fait. Ce n'est pas le compilateur qui fait ce travail mais l'éditeur de liens. Et il ne lit pas les deux noms comme malloc : il fait deux redirections en sens opposés.
-
-Avec -Wl,--wrap,malloc :
-- un appel à malloc (par exemple dans int.c) est relié à __wrap_malloc, ton wrapper ;
-- un appel à __real_malloc (dans le wrapper) est relié à malloc, celui de la libc.
-
-Résultat : int.c → __wrap_malloc → __real_malloc, qui est en réalité le malloc de la libc.
-
-Le compilateur ne voit rien de tout ça. Il compile int.c avec un appel à malloc tout à fait normal, et mymalloc.c avec un appel à une fonction __real_malloc qui n'est définie nulle part. Les redirections n'ont lieu qu'à l'édition des liens, dont la commande finale ressemble à ceci :
-
-gcc -Wl,--wrap,malloc -Wl,--wrap,free -o intl int.o mymalloc.o
-
-✻ Crunched for 10s · done 6:33 PM
-
-❯ Quel est le mécanisme ? Je comprends qu'en écrivant -Wl,--wrap,malloc, je lie toutes les écritures de malloc() à __wrap_malloc, mais pourquoi __real_malloc est-il bien interprété ? C'est une convention du compilateur ? __wrap et __real sont déjà prévus ?
-
-Oui, c'est une convention, mais celle de l'éditeur de liens (ld) et non du compilateur. Les préfixes __wrap_ et __real_ sont codés en dur dans l'option --wrap.
-
-Le mécanisme :
-
-1. Compilation. gcc -c mymalloc.c produit mymalloc.o. Le compilateur ne connaît pas __real_malloc : il le traite comme une fonction externe quelconque et l'inscrit dans la table des symboles comme symbole non défini, comme il le ferait pour printf.
-2. Édition des liens. Avec --wrap malloc, ld applique deux règles chaque fois qu'il doit résoudre un symbole non défini :
-   - si le nom est malloc, il le relie à __wrap_malloc ;
-   - si le nom est __real_malloc, il le relie à malloc.
-
-Une seule option active donc les deux règles. __real_malloc n'existe nulle part en tant que fonction : c'est juste un nom réservé que ld reconnaît et redirige.
