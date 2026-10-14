@@ -6,16 +6,21 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/10 00:22:15 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/11 23:31:29 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/14 21:40:14 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #define _GNU_SOURCE
 
+#include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "cvector.h"
+#include "ft_nm.h"
 
 struct global_args_t {
     bool debug_syms;  /* -a option*/
@@ -37,6 +42,14 @@ const struct option opts[] = {{"debug-syms", no_argument, nullptr, 'a'},
                               {"reverse-sort", no_argument, nullptr, 'r'},
                               {"undefined-only", no_argument, nullptr, 'u'},
                               {nullptr, 0, nullptr, 0}};
+
+void test_32() {
+    printf("32\n");
+};
+void test_64() {
+    printf("64\n");
+}
+#define test(x) _Generic((x), Elf32_Ehdr *: test_32, Elf64_Ehdr *: test_64)();
 
 int main(int argc, char** argv, char** envp) {
     (void)argc;
@@ -100,5 +113,38 @@ int main(int argc, char** argv, char** envp) {
          it != cvector_end(global_args.filename); ++it) {
         printf("  %s\n", *it);
     }
+
+    /* --------------------------------------------------------------------------
+     */
+
+    int file_fd = open(global_args.filename[0], O_RDONLY);
+    if (file_fd == -1) {
+        perror("open");
+    }
+
+    struct stat st = {};
+    int file_stats = fstat(file_fd, &st);
+    if (file_stats == -1) {
+        perror("fstat");
+    }
+
+    void* mapped = nullptr;
+
+    if (file_fd != -1) {
+        mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, file_fd, 0);
+    }
+
+    Elf64_Ehdr* e = (Elf64_Ehdr*)mapped;
+    if (e) {
+        close(file_fd);
+        file_fd = -1;
+    }
+
+    // test(e)
+
+    e_ident_interpret(e->e_ident);
+
+    munmap(mapped, st.st_size);
+
     return (0);
 }
