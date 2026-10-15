@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/14 17:34:06 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/15 15:11:51 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/15 19:30:33 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,54 @@
 
 #include <elf.h>
 
-void e_ident_interpret(const unsigned char e_ident[16]);
+typedef enum {
+    BSS,
+    COMMENT,
+    CTORS,
+    DATA,
+    DATA1,
+    DEBUG,
+    DTORS,
+    DYNAMIC,
+    DYNSTR,
+    DYNSYM,
+    FINI,
+    GNU_VERSION,
+    GNU_VERSION_D,
+    GNU_VERSION_R,
+    GOT,
+    HASH,
+    INIT,
+    INTERP,
+    LINE,
+    NOTE,
+    NOTE_ABI_TAG,
+    NOTE_GNU_BUILD_ID,
+    NOTE_GNU_STACK,
+    NOTE_OPENBSD_IDENT,
+    PLT,
+    RELNAME,
+    RELANAME,
+    RODATA,
+    RODATA1,
+    SHSTRTAB,
+    SYMTAB,
+    TEXT
+} elf_section_e;
+
+struct elf_section {
+    const char* name;
+    void* addr;
+    int type;
+};
+
+extern struct elf_section elf_sections[];
+
+struct elf_section* get_section_entry_ptr(const char* section_name);
+
+void executable_header_interpret(const unsigned char e_ident[16]);
 
 void ehdr_interpret(const Elf64_Ehdr* e);
 void phdr_interpret(const Elf64_Phdr* p);
-void shdr_interpret(const Elf64_Shdr* s);
+void shdr_interpret(const Elf64_Shdr* s, const void* e,
+                    Elf64_Off shstrtab_start);

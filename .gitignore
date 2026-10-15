@@ -9,8 +9,8 @@
 # Documentation & subject
 # ============================================================
 *.pdf
-*.md
-!README.md
+# *.md
+# !README.md
 .docs/
 !Linkers.md
 .code

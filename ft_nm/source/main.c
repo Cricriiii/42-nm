@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/10 00:22:15 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/15 15:27:11 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/15 19:28:00 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,8 +114,7 @@ int main(int argc, char** argv, char** envp) {
         printf("  %s\n", *it);
     }
 
-    /* --------------------------------------------------------------------------
-     */
+    /* ----------------------------------------------------------------------- */
 
     int file_fd = open(global_args.filename[0], O_RDONLY);
     if (file_fd == -1) {
@@ -152,18 +151,19 @@ int main(int argc, char** argv, char** envp) {
         }
     }
 
-    // Elf64_Sym* str;
-    
     /* Shdr Section header */
     if (e->e_shoff) {
-        // Elf64_Half e_sh_size = e->e_shentsize;
-        Elf64_Half e_sh_num = e->e_shnum;
         Elf64_Shdr* s = (Elf64_Shdr*)(mapped + e->e_shoff);
-        for (auto ptr = s; ptr - s < e_sh_num; ++ptr) {
-            shdr_interpret(ptr);
+        Elf64_Shdr* shstrtab_hdr = &s[e->e_shstrndx];           // addresse du header de .shstrtab
+        Elf64_Off shstrtab_ofst = shstrtab_hdr->sh_offset;      // offset de .shstrtab à partir du début du fichier
+        
+        for (auto ptr = s; ptr - s < e->e_shnum; ++ptr) {
+            shdr_interpret(ptr, (void*)e, shstrtab_ofst);
         }
     }
+
     
+
     munmap(mapped, st.st_size);
 
     return (0);

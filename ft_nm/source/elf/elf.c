@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/14 17:32:41 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/15 15:29:40 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/15 19:30:39 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,13 +16,66 @@
 
 #include "ft_nm.h"
 
-// #define e_ident_interpret(bits)
+// #define executable_header_interpret(bits)
 //     Elf##bits##_Ehdr e_ident##bits##_interpret(unsigned char* e_ident)
 
-// e_ident_interpret(32) {
+// executable_header_interpret(32) {
 // }
 
-void e_ident_interpret(const unsigned char e_ident[16]) {
+/**
+ * Sections as definied by man 5 elf.
+ * Note: man contains a mistake for .gnu.version_r.
+ * Proper type is indeed SHT_GNU_verneed.
+ */
+struct elf_section elf_sections[] = {
+    {".bss", nullptr, SHT_NOBITS},
+    {".comment", nullptr, SHT_PROGBITS},
+    {".ctors", nullptr, SHT_PROGBITS},
+    {".data", nullptr, SHT_PROGBITS},
+    {".data1", nullptr, SHT_PROGBITS},
+    {".debug", nullptr, SHT_PROGBITS},
+    {".dtors", nullptr, SHT_PROGBITS},
+    {".dynamic", nullptr, SHT_DYNAMIC},
+    {".dynstr", nullptr, SHT_STRTAB},
+    {".dynsym", nullptr, SHT_DYNSYM},
+    {".fini", nullptr, SHT_PROGBITS},
+    {".gnu.version", nullptr, SHT_GNU_versym},
+    {".gnu.version_d", nullptr, SHT_GNU_verdef},
+    {".gnu.version_r", nullptr, SHT_GNU_verneed},
+    {".got", nullptr, SHT_PROGBITS},
+    {".hash", nullptr, SHT_HASH},
+    {".init", nullptr, SHT_PROGBITS},
+    {".interp", nullptr, SHT_PROGBITS},
+    {".line", nullptr, SHT_PROGBITS},
+    {".note", nullptr, SHT_NOTE},
+    {".note.ABI-tag", nullptr, SHT_NOTE},
+    {".note.gnu.build-id", nullptr, SHT_NOTE},
+    {".note.GNU-stack", nullptr, SHT_PROGBITS},
+    {".note.openbsd.ident", nullptr, SHT_NULL},
+    {".plt", nullptr, SHT_PROGBITS},
+    {".relNAME", nullptr, SHT_REL},
+    {".relaNAME", nullptr, SHT_RELA},
+    {".rodata", nullptr, SHT_PROGBITS},
+    {".rodata1", nullptr, SHT_PROGBITS},
+    {".shstrtab", nullptr, SHT_STRTAB},
+    {".strtab", nullptr, SHT_STRTAB},
+    {".symtab", nullptr, SHT_SYMTAB},
+    {".text", nullptr, SHT_PROGBITS},
+    {nullptr, nullptr, SHT_NULL} /* null-terminated */
+};
+
+struct elf_section* get_section_entry_ptr(const char* section_name) {
+    struct elf_section* ptr = elf_sections;
+    while (ptr->name) {
+        if (!strcmp(ptr->name, section_name)) {
+            return (ptr);
+        }
+        ++ptr;
+    }
+    return (nullptr);
+}
+
+void executable_header_interpret(const unsigned char e_ident[16]) {
     printf("Format: %c%c%c%c\n", e_ident[EI_MAG0], e_ident[EI_MAG1],
            e_ident[EI_MAG2], e_ident[EI_MAG3]);
 
@@ -99,7 +152,7 @@ void e_ident_interpret(const unsigned char e_ident[16]) {
 void ehdr_interpret(const Elf64_Ehdr* e) {
     printf("\n***Section ELF header start***\n");
 
-    e_ident_interpret(e->e_ident);
+    executable_header_interpret(e->e_ident);
 
     printf("\n\n---Follow-up---\n");
 
@@ -288,12 +341,20 @@ void phdr_interpret(const Elf64_Phdr* p) {
     printf("***Section end***\n\n");
 }
 
-void shdr_interpret(const Elf64_Shdr* s) {
+void shdr_interpret(const Elf64_Shdr* s, const void* e,
+                    Elf64_Off shstrtab_start) {
     static int i;
 
     printf("\n***Section Section header #%d start***\n", i++);
 
-    printf("Name: %d\n", s->sh_name);
+    const char* section_name = (const char*)((e + shstrtab_start) + s->sh_name);
+
+    struct elf_section* ptr = get_section_entry_ptr(section_name);
+    if (ptr) {
+        ptr->addr = (void*)s;
+    }
+
+    printf("Name: %s\n", section_name);
 
     printf("Type: ");
     switch (s->sh_type) {
