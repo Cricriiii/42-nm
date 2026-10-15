@@ -6,24 +6,25 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/14 17:32:41 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/14 21:43:37 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/15 15:29:40 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "ft_nm.h"
-#include <stdlib.h>
-#include <stdio.h>
 
-// #define e_ident_interpret(bits) 
+// #define e_ident_interpret(bits)
 //     Elf##bits##_Ehdr e_ident##bits##_interpret(unsigned char* e_ident)
 
 // e_ident_interpret(32) {
 // }
 
 void e_ident_interpret(const unsigned char e_ident[16]) {
-    printf("Format: %c%c%c%c\n", e_ident[EI_MAG0], e_ident[EI_MAG1], e_ident[EI_MAG2], e_ident[EI_MAG3]);
+    printf("Format: %c%c%c%c\n", e_ident[EI_MAG0], e_ident[EI_MAG1],
+           e_ident[EI_MAG2], e_ident[EI_MAG3]);
 
     switch (e_ident[EI_CLASS]) {
         case ELFCLASSNONE:
@@ -45,7 +46,7 @@ void e_ident_interpret(const unsigned char e_ident[16]) {
             break;
         case ELFDATA2MSB:
             printf("Data: %s\n", "Two's complement, big-endian.");
-            break;        
+            break;
     }
 
     switch (e_ident[EI_VERSION]) {
@@ -89,7 +90,286 @@ void e_ident_interpret(const unsigned char e_ident[16]) {
             printf("OS_ABI: %s\n", "Stand-alone (embedded) ABI");
             break;
     }
+
     printf("ABI_VERSION: %d\n", e_ident[EI_ABIVERSION]);
     printf("PAD: %d\n", e_ident[EI_PAD]);
     printf("N_INDENT: %d\n", e_ident[EI_NIDENT]);
+}
+
+void ehdr_interpret(const Elf64_Ehdr* e) {
+    printf("\n***Section ELF header start***\n");
+
+    e_ident_interpret(e->e_ident);
+
+    printf("\n\n---Follow-up---\n");
+
+    printf("Type: ");
+    switch (e->e_type) {
+        case ET_NONE:
+            printf("ET_NONE\n");
+            break;
+
+        case ET_REL:
+            printf("ET_REL\n");
+            break;
+
+        case ET_EXEC:
+            printf("ET_EXEC\n");
+            break;
+
+        case ET_DYN:
+            printf("ET_DYN\n");
+            break;
+
+        case ET_CORE:
+            printf("ET_CORE\n");
+            break;
+    }
+
+    switch (e->e_machine) {
+        case EM_NONE:
+            printf("Machine: EM_\n");
+            break;
+
+        case EM_M32:
+            printf("Machine: EM_M32\n");
+            break;
+
+        case EM_SPARC:
+            printf("Machine: EM_SPARC\n");
+            break;
+
+        case EM_386:
+            printf("Machine: EM_386\n");
+            break;
+
+        case EM_68K:
+            printf("Machine: EM_68K\n");
+            break;
+
+        case EM_88K:
+            printf("Machine: EM_88K\n");
+            break;
+
+        case EM_860:
+            printf("Machine: EM_860\n");
+            break;
+
+        case EM_MIPS:
+            printf("Machine: EM_MIPS\n");
+            break;
+
+        case EM_PARISC:
+            printf("Machine: EM_PARISC\n");
+            break;
+
+        case EM_SPARC32PLUS:
+            printf("Machine: EM_SPARC32PLUS\n");
+            break;
+
+        case EM_PPC:
+            printf("Machine: EM_PPC\n");
+            break;
+
+        case EM_PPC64:
+            printf("Machine: EM_PPC64\n");
+            break;
+
+        case EM_S390:
+            printf("Machine: EM_S390\n");
+            break;
+
+        case EM_ARM:
+            printf("Machine: EM_ARM\n");
+            break;
+
+        case EM_SH:
+            printf("Machine: EM_SH\n");
+            break;
+
+        case EM_SPARCV9:
+            printf("Machine: EM_SPARCV9\n");
+            break;
+
+        case EM_IA_64:
+            printf("Machine: EM_IA_64\n");
+            break;
+
+        case EM_X86_64:
+            printf("Machine: EM_X86_64\n");
+            break;
+
+        case EM_VAX:
+            printf("Machine: EM_VAX\n");
+            break;
+    }
+
+    switch (e->e_version) {
+        case EV_NONE:
+            printf("Version: EV_NONE\n");
+            break;
+
+        case EV_CURRENT:
+            printf("Version: EV_CURRENT\n");
+            break;
+    }
+
+    printf("entry: 0x%.4lx\n", e->e_entry);
+    printf("phoff: 0x%.4lx\n", e->e_phoff);
+    printf("shoff: 0x%.4lx\n", e->e_shoff);
+
+    printf("flags: 0x%.4x\n", e->e_flags);
+
+    printf("ehsize: 0x%.4x\n", e->e_ehsize);
+    printf("phentsize: 0x%.4x\n", e->e_phentsize);
+    printf("phnum: 0x%.4x\n", e->e_phnum);
+    printf("shentsize: 0x%.4x\n", e->e_shentsize);
+    printf("shnum: 0x%.4x\n", e->e_shnum);
+
+    printf("e_shstrndx: 0x%.4x\n", e->e_shstrndx);
+}
+
+void phdr_interpret(const Elf64_Phdr* p) {
+    static int i;
+
+    printf("\n***Section program header #%d start***\n", i++);
+
+    printf("Type: ");
+    switch (p->p_type) {
+        case PT_NULL:
+            printf("PT_NULL\n");
+            break;
+
+        case PT_LOAD:
+            printf("PT_LOAD\n");
+            break;
+
+        case PT_DYNAMIC:
+            printf("PT_DYNAMIC\n");
+            break;
+
+        case PT_INTERP:
+            printf("PT_INTERP\n");
+            break;
+
+        case PT_NOTE:
+            printf("PT_NOTE\n");
+            break;
+
+        case PT_SHLIB:
+            printf("PT_SHLIB\n");
+            break;
+
+        case PT_PHDR:
+            printf("PT_PHDR\n");
+            break;
+
+        default:
+            if (p->p_type >= PT_LOPROC && p->p_type <= PT_HIPROC) {
+                printf("Between PT_LOPROC and PT_HIPROC\n");
+                break;
+            } else if (p->p_type == PT_GNU_STACK) {
+                printf("PT_GNU_STACK\n");
+                break;
+            }
+    }
+
+    printf("Offset: 0x%.4lx\n", p->p_offset);
+    printf("Vaddr: 0x%.4lx\n", p->p_vaddr);
+    printf("Paddr: 0x%.4lx\n", p->p_paddr);
+
+    printf("filesz: 0x%.4lx\n", p->p_filesz);
+    printf("memsz: 0x%.4lx\n", p->p_memsz);
+
+    printf("Flags: %s%s%s\n", p->p_flags & PF_R ? "R" : "-",
+           p->p_flags & PF_W ? "W" : "-", p->p_flags & PF_X ? "X" : "-");
+    printf("Align: %lu\n", p->p_align);
+
+    printf("***Section end***\n\n");
+}
+
+void shdr_interpret(const Elf64_Shdr* s) {
+    static int i;
+
+    printf("\n***Section Section header #%d start***\n", i++);
+
+    printf("Name: %d\n", s->sh_name);
+
+    printf("Type: ");
+    switch (s->sh_type) {
+        case SHT_NULL:
+            printf("SHT_NULL\n");
+            break;
+
+        case SHT_PROGBITS:
+            printf("SHT_PROGBITS\n");
+            break;
+
+        case SHT_SYMTAB:
+            printf("SHT_SYMTAB\n");
+            break;
+
+        case SHT_STRTAB:
+            printf("SHT_STRTAB\n");
+            break;
+
+        case SHT_RELA:
+            printf("SHT_RELA\n");
+            break;
+
+        case SHT_HASH:
+            printf("\n");
+            break;
+
+        case SHT_DYNAMIC:
+            printf("SHT_HASH\n");
+            break;
+
+        case SHT_NOTE:
+            printf("SHT_NOTE\n");
+            break;
+
+        case SHT_NOBITS:
+            printf("SHT_NOBITS\n");
+            break;
+
+        case SHT_REL:
+            printf("SHT_REL\n");
+            break;
+
+        case SHT_SHLIB:
+            printf("SHT_SHLIB\n");
+            break;
+
+        case SHT_DYNSYM:
+            printf("SHT_DYNSYM\n");
+            break;
+
+        default:
+            if (s->sh_type >= SHT_LOPROC && s->sh_type <= SHT_HIPROC) {
+                printf("Between SHT_LOPROC and SHT_HIPROC\n");
+                break;
+            } else if (s->sh_type >= SHT_LOUSER && s->sh_type <= SHT_HIUSER) {
+                printf("Between SHT_LOUSER and SHT_HIUSER\n");
+                break;
+            }
+    }
+
+    printf("Flags: %s%s%s%s\n", s->sh_flags & SHF_WRITE ? "W" : "-",
+           s->sh_flags & SHF_ALLOC ? "A" : "-",
+           s->sh_flags & SHF_EXECINSTR ? "X" : "-",
+           s->sh_flags & SHF_MASKPROC ? "M" : "-");
+
+    printf("Addr: 0x%.4lx\n", s->sh_addr);
+    printf("Offset: 0x%.4lx\n", s->sh_offset);
+    printf("Size: 0x%.4lx\n", s->sh_size);
+
+    printf("Link: 0x%.4x\n", s->sh_link);
+    printf("Info: 0x%.4x\n", s->sh_info);
+
+    printf("Addralign: 0x%.4lx\n", s->sh_addralign);
+
+    printf("Entsize: 0x%.4lx\n", s->sh_entsize);
+
+    printf("***Section end***\n\n");
 }

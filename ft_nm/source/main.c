@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/10 00:22:15 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/14 21:40:14 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/15 15:27:11 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,7 @@ void test_32() {
 void test_64() {
     printf("64\n");
 }
-#define test(x) _Generic((x), Elf32_Ehdr *: test_32, Elf64_Ehdr *: test_64)();
+#define test(x) _Generic((x), Elf32_Ehdr*: test_32, Elf64_Ehdr*: test_64)();
 
 int main(int argc, char** argv, char** envp) {
     (void)argc;
@@ -98,15 +98,15 @@ int main(int argc, char** argv, char** envp) {
         cvector_push_back(global_args.filename, "a.out");
     }
 
-    printf(
-        "debug_syms = %d\n"
-        "extern_only = %d\n"
-        "help = %d\n"
-        "no_sort = %d\n"
-        "rsort = %d\n"
-        "undef_only = %d\n",
-        global_args.debug_syms, global_args.extern_only, global_args.help,
-        global_args.no_sort, global_args.rsort, global_args.undef_only);
+    // printf(
+    //     "debug_syms = %d\n"
+    //     "extern_only = %d\n"
+    //     "help = %d\n"
+    //     "no_sort = %d\n"
+    //     "rsort = %d\n"
+    //     "undef_only = %d\n",
+    //     global_args.debug_syms, global_args.extern_only, global_args.help,
+    //     global_args.no_sort, global_args.rsort, global_args.undef_only);
 
     printf("Files:\n");
     for (cvector_iterator(char*) it = cvector_begin(global_args.filename);
@@ -132,18 +132,38 @@ int main(int argc, char** argv, char** envp) {
 
     if (file_fd != -1) {
         mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, file_fd, 0);
-    }
-
-    Elf64_Ehdr* e = (Elf64_Ehdr*)mapped;
-    if (e) {
         close(file_fd);
         file_fd = -1;
     }
 
-    // test(e)
+    /* Ehdr Elf header */
+    Elf64_Ehdr* e = (Elf64_Ehdr*)mapped;
+    if (e) {
+        ehdr_interpret(e);
+    }
+    
+    /* Phdr Program header */    
+    if (e->e_phoff) {
+        // Elf64_Half e_ph_size = e->e_phentsize;
+        Elf64_Half e_ph_num = e->e_phnum;
+        Elf64_Phdr* p = (Elf64_Phdr*)(mapped + e->e_phoff);
+        for (auto ptr = p; ptr - p < e_ph_num; ++ptr) {
+            phdr_interpret(ptr);
+        }
+    }
 
-    e_ident_interpret(e->e_ident);
-
+    // Elf64_Sym* str;
+    
+    /* Shdr Section header */
+    if (e->e_shoff) {
+        // Elf64_Half e_sh_size = e->e_shentsize;
+        Elf64_Half e_sh_num = e->e_shnum;
+        Elf64_Shdr* s = (Elf64_Shdr*)(mapped + e->e_shoff);
+        for (auto ptr = s; ptr - s < e_sh_num; ++ptr) {
+            shdr_interpret(ptr);
+        }
+    }
+    
     munmap(mapped, st.st_size);
 
     return (0);
