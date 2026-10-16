@@ -6,13 +6,14 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/14 17:32:41 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/15 19:30:39 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/16 14:13:18 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 #include "ft_nm.h"
 
@@ -27,53 +28,11 @@
  * Note: man contains a mistake for .gnu.version_r.
  * Proper type is indeed SHT_GNU_verneed.
  */
-struct elf_section elf_sections[] = {
-    {".bss", nullptr, SHT_NOBITS},
-    {".comment", nullptr, SHT_PROGBITS},
-    {".ctors", nullptr, SHT_PROGBITS},
-    {".data", nullptr, SHT_PROGBITS},
-    {".data1", nullptr, SHT_PROGBITS},
-    {".debug", nullptr, SHT_PROGBITS},
-    {".dtors", nullptr, SHT_PROGBITS},
-    {".dynamic", nullptr, SHT_DYNAMIC},
-    {".dynstr", nullptr, SHT_STRTAB},
-    {".dynsym", nullptr, SHT_DYNSYM},
-    {".fini", nullptr, SHT_PROGBITS},
-    {".gnu.version", nullptr, SHT_GNU_versym},
-    {".gnu.version_d", nullptr, SHT_GNU_verdef},
-    {".gnu.version_r", nullptr, SHT_GNU_verneed},
-    {".got", nullptr, SHT_PROGBITS},
-    {".hash", nullptr, SHT_HASH},
-    {".init", nullptr, SHT_PROGBITS},
-    {".interp", nullptr, SHT_PROGBITS},
-    {".line", nullptr, SHT_PROGBITS},
-    {".note", nullptr, SHT_NOTE},
-    {".note.ABI-tag", nullptr, SHT_NOTE},
-    {".note.gnu.build-id", nullptr, SHT_NOTE},
-    {".note.GNU-stack", nullptr, SHT_PROGBITS},
-    {".note.openbsd.ident", nullptr, SHT_NULL},
-    {".plt", nullptr, SHT_PROGBITS},
-    {".relNAME", nullptr, SHT_REL},
-    {".relaNAME", nullptr, SHT_RELA},
-    {".rodata", nullptr, SHT_PROGBITS},
-    {".rodata1", nullptr, SHT_PROGBITS},
-    {".shstrtab", nullptr, SHT_STRTAB},
-    {".strtab", nullptr, SHT_STRTAB},
-    {".symtab", nullptr, SHT_SYMTAB},
-    {".text", nullptr, SHT_PROGBITS},
-    {nullptr, nullptr, SHT_NULL} /* null-terminated */
-};
 
-struct elf_section* get_section_entry_ptr(const char* section_name) {
-    struct elf_section* ptr = elf_sections;
-    while (ptr->name) {
-        if (!strcmp(ptr->name, section_name)) {
-            return (ptr);
-        }
-        ++ptr;
-    }
-    return (nullptr);
-}
+void* strtab_addr;
+void* dyn_strtab_addr;
+
+
 
 void executable_header_interpret(const unsigned char e_ident[16]) {
     printf("Format: %c%c%c%c\n", e_ident[EI_MAG0], e_ident[EI_MAG1],
@@ -346,14 +305,8 @@ void shdr_interpret(const Elf64_Shdr* s, const void* e,
     static int i;
 
     printf("\n***Section Section header #%d start***\n", i++);
-
+    
     const char* section_name = (const char*)((e + shstrtab_start) + s->sh_name);
-
-    struct elf_section* ptr = get_section_entry_ptr(section_name);
-    if (ptr) {
-        ptr->addr = (void*)s;
-    }
-
     printf("Name: %s\n", section_name);
 
     printf("Type: ");
@@ -368,9 +321,29 @@ void shdr_interpret(const Elf64_Shdr* s, const void* e,
 
         case SHT_SYMTAB:
             printf("SHT_SYMTAB\n");
+
+            /* Symbol table */
+   
+            printf("\n---Symbols start---\n");
+
+            Elf64_Xword size = s->sh_size;
+            ptrdiff_t n_elem = (ptrdiff_t)(size / sizeof(Elf64_Sym));
+            Elf64_Sym* symtab = (void*)e + s->sh_offset;
+            for (Elf64_Sym* cursym = symtab; cursym - symtab < n_elem; ++cursym) {
+                printf("%s\n", (const char*)(strtab_addr + cursym->st_name));
+                continue;
+            }
+
+            printf("***Section end***\n\n");  
             break;
 
         case SHT_STRTAB:
+            if (!strcmp(section_name, ".strtab")) {
+                strtab_addr = (void*)e + s->sh_offset;
+            } else if (!strcmp(section_name, ".dynstr")) {
+                dyn_strtab_addr = (void*)e + s->sh_offset;
+            }
+
             printf("SHT_STRTAB\n");
             break;
 
@@ -379,11 +352,11 @@ void shdr_interpret(const Elf64_Shdr* s, const void* e,
             break;
 
         case SHT_HASH:
-            printf("\n");
+            printf("SHT_HASH\n");
             break;
 
         case SHT_DYNAMIC:
-            printf("SHT_HASH\n");
+            printf("SHT_DYNAMIC\n");
             break;
 
         case SHT_NOTE:
@@ -431,6 +404,9 @@ void shdr_interpret(const Elf64_Shdr* s, const void* e,
     printf("Addralign: 0x%.4lx\n", s->sh_addralign);
 
     printf("Entsize: 0x%.4lx\n", s->sh_entsize);
-
-    printf("***Section end***\n\n");
 }
+
+
+// void sym_interpret(const Elf64_Sym* s) {
+//     (void)s;
+// }

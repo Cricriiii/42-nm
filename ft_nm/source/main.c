@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/10 00:22:15 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/15 19:28:00 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/16 13:52:06 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stddef.h>
 
 #include "cvector.h"
 #include "ft_nm.h"
@@ -161,6 +162,7 @@ int main(int argc, char** argv, char** envp) {
             shdr_interpret(ptr, (void*)e, shstrtab_ofst);
         }
     }
+
 
     
 
