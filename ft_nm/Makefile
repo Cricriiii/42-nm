@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/10 15:04:35 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/18 23:45:09 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -34,15 +34,17 @@ PROGRAM		?= ft_nm
 WORKSPACE	?= $(CURDIR)
 
 SRC_DIR		:= $(WORKSPACE)/source
+LIB_DIR		:= $(WORKSPACE)/libs/source
 OBJ_DIR		:= $(WORKSPACE)/.object
 
 FILES_C		:= $(shell find $(SRC_DIR) -type f -name '*.c')
 FILES_O		:= $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(FILES_C))
 
-CVECTOR		:= $(WORKSPACE)/../c-vector
+LIBS_C		:= $(shell find $(LIB_DIR) -type f -name '*.c')
+FILES_O		+= $(patsubst $(LIB_DIR)/%.c, $(OBJ_DIR)/libs/%.o, $(LIBS_C))
 
 INCLUDES	:= $(WORKSPACE)/include
-INCLUDES	+= $(WORKSPACE)/../c-vector
+INCLUDES	+= $(WORKSPACE)/libs/include
 INCLUDES	:= $(INCLUDES:%=-I %)
 
 # ---------------------------------------------------------------------------- #
@@ -51,13 +53,16 @@ INCLUDES	:= $(INCLUDES:%=-I %)
 
 ## Build the program
 all:
-	+$(MAKE) c-vector
 	+$(MAKE) $(PROGRAM)
 
 $(PROGRAM): $(FILES_O)
 	$(CC) $(C_FLAGS) $(INCLUDES) $^ -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(@D)
+	$(CC) $(C_FLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/libs/%.o: $(LIB_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(C_FLAGS) $(INCLUDES) -c $< -o $@
 
@@ -68,12 +73,6 @@ re:
 	+$(MAKE) fclean
 	+$(MAKE) all
 
-c-vector:
-ifeq ($(wildcard $(WORKSPACE)/../c-vector),)
-	@git clone https://github.com/eteran/c-vector.git $(CVECTOR)
-else
-	@echo "c-vector is already installed"
-endif
 
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
@@ -87,12 +86,6 @@ clean:
 fclean:
 	+$(MAKE) clean
 	@rm -f $(WORKSPACE)/$(PROGRAM)
-
-## Call 'fclean' and delete all librairies
-reset:
-	+$(MAKE) fclean
-	@rm -rf $(CVECTOR)
-
 
 # ---------------------------------------------------------------------------- #
 # misc                                                                         #

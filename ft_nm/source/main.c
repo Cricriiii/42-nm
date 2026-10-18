@@ -5,168 +5,62 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/10/10 00:22:15 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/16 13:52:06 by cgajean          ###   ########.fr       */
+/*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
+/*   Updated: 2026/10/18 23:42:43 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#define _GNU_SOURCE
-
-#include <fcntl.h>
-#include <getopt.h>
 #include <stdio.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stddef.h>
+#include <stdlib.h>
 
-#include "cvector.h"
+#include "file_manip.h"
 #include "ft_nm.h"
+#include "options.h"
+#include "print.h"
+#include "resource_collector.h"
+#include "xalloc.h"
 
-struct global_args_t {
-    bool debug_syms;  /* -a option*/
-    bool extern_only; /* -g option*/
-    bool help;        /* -h option*/
-    bool no_sort;     /* -p option*/
-    bool rsort;       /* -r option*/
-    bool undef_only;  /* -u option*/
-    cvector(char*) filename;
+static char* program_name; /* The name used to invoke the program */
 
-} global_args = {};
+int mainloop(char** files) {
+    int retval = 0;
+    for (char** file = files; *file; ++file) {
+        /* Acquire file descriptor */
+        int file_fd;
+        if ((file_fd = open_file(*file)) == -1) {
+            retval = 1;
+            continue;
+        }
+        add_fd_resource(file_fd);
 
-static const char* opt_string = "aghpru";
+        /* Map the file into memory */
+        mappedmem_t mapped = {};
+        if (map_file(file_fd, &mapped) == -1) {
+            print_err(*file);
+            exit(retval = 1);
+        }
+        del_fd_resource(file_fd);
 
-const struct option opts[] = {{"debug-syms", no_argument, nullptr, 'a'},
-                              {"extern-only", no_argument, nullptr, 'g'},
-                              {"help", no_argument, NULL, 'h'},
-                              {"no-sort", no_argument, nullptr, 'p'},
-                              {"reverse-sort", no_argument, nullptr, 'r'},
-                              {"undefined-only", no_argument, nullptr, 'u'},
-                              {nullptr, 0, nullptr, 0}};
-
-void test_32() {
-    printf("32\n");
-};
-void test_64() {
-    printf("64\n");
+        munmap(mapped.addr, mapped.size);
+        printf("%s\n", *file);
+    }
+    return retval;
 }
-#define test(x) _Generic((x), Elf32_Ehdr*: test_32, Elf64_Ehdr*: test_64)();
 
-int main(int argc, char** argv, char** envp) {
-    (void)argc;
-    (void)argv;
-    (void)envp;
-
-    int long_index;
-    int opt;
-    while ((opt = getopt_long(argc, argv, opt_string, opts, &long_index)) !=
-           -1) {
-        switch (opt) {
-            case 'a':
-                global_args.debug_syms = true;
-                break;
-
-            case 'g':
-                global_args.extern_only = true;
-                break;
-
-            case 'h':
-                global_args.help = true;
-                break;
-
-            case 'p':
-                global_args.no_sort = true;
-                break;
-
-            case 'r':
-                global_args.rsort = true;
-                break;
-
-            case 'u':
-                global_args.undef_only = true;
-                break;
-
-            default:
-                cvector_push_back(global_args.filename, optarg);
-        }
+int main(int argc, char** argv) {
+    nm_args_t options = {};
+    if (get_options(argc, argv, &options) == -1) {
+        return 1;
     }
-
-    for (int i = optind; i < argc; ++i) {
-        cvector_push_back(global_args.filename, argv[i]);
-    }
-
-    if (cvector_empty(global_args.filename)) {
-        cvector_push_back(global_args.filename, "a.out");
-    }
-
-    // printf(
-    //     "debug_syms = %d\n"
-    //     "extern_only = %d\n"
-    //     "help = %d\n"
-    //     "no_sort = %d\n"
-    //     "rsort = %d\n"
-    //     "undef_only = %d\n",
-    //     global_args.debug_syms, global_args.extern_only, global_args.help,
-    //     global_args.no_sort, global_args.rsort, global_args.undef_only);
-
-    printf("Files:\n");
-    for (cvector_iterator(char*) it = cvector_begin(global_args.filename);
-         it != cvector_end(global_args.filename); ++it) {
-        printf("  %s\n", *it);
-    }
-
-    /* ----------------------------------------------------------------------- */
-
-    int file_fd = open(global_args.filename[0], O_RDONLY);
-    if (file_fd == -1) {
-        perror("open");
-    }
-
-    struct stat st = {};
-    int file_stats = fstat(file_fd, &st);
-    if (file_stats == -1) {
-        perror("fstat");
-    }
-
-    void* mapped = nullptr;
-
-    if (file_fd != -1) {
-        mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, file_fd, 0);
-        close(file_fd);
-        file_fd = -1;
-    }
-
-    /* Ehdr Elf header */
-    Elf64_Ehdr* e = (Elf64_Ehdr*)mapped;
-    if (e) {
-        ehdr_interpret(e);
-    }
-    
-    /* Phdr Program header */    
-    if (e->e_phoff) {
-        // Elf64_Half e_ph_size = e->e_phentsize;
-        Elf64_Half e_ph_num = e->e_phnum;
-        Elf64_Phdr* p = (Elf64_Phdr*)(mapped + e->e_phoff);
-        for (auto ptr = p; ptr - p < e_ph_num; ++ptr) {
-            phdr_interpret(ptr);
-        }
-    }
-
-    /* Shdr Section header */
-    if (e->e_shoff) {
-        Elf64_Shdr* s = (Elf64_Shdr*)(mapped + e->e_shoff);
-        Elf64_Shdr* shstrtab_hdr = &s[e->e_shstrndx];           // addresse du header de .shstrtab
-        Elf64_Off shstrtab_ofst = shstrtab_hdr->sh_offset;      // offset de .shstrtab à partir du début du fichier
-        
-        for (auto ptr = s; ptr - s < e->e_shnum; ++ptr) {
-            shdr_interpret(ptr, (void*)e, shstrtab_ofst);
-        }
-    }
-
-
-    
-
-    munmap(mapped, st.st_size);
-
-    return (0);
+    return mainloop(options.files);
 }
+
+__attribute((constructor)) void init([[maybe_unused]] int argc, char** argv) {
+    program_name = *argv;
+    xmalloc_set_program_name(*argv);
+    init_resource_collector();
+    atexit(destroy_resource_collector);
+}
+
+/* error open fd ulimit = 127*/
+/* error open perm = 1 */
