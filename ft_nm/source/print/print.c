@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:13:42 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/18 23:26:46 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/19 11:31:41 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@
 
 static char* program_name;
 
-void init_print(const char* pname) {
+void print_set_program_name(const char* pname) {
     program_name = (char*)pname;
 }
 
@@ -39,7 +39,7 @@ void usage(FILE* stream, int status) {
     exit(status);
 }
 
-char* errmsg(const char* filename) {
+char* error_header(const char* filename) {
     size_t errlen =
         strlen(program_name) + strlen(filename) + 3; /* add ": " and `\0` */
     char* err = xcalloc(errlen, sizeof(char));
@@ -47,8 +47,14 @@ char* errmsg(const char* filename) {
     return err;
 }
 
-void print_err(const char* filename) {
-    char* err = errmsg(filename);
-    perror(err);
-    free(err);
+void print_perror(const char* filename) {
+    char* err_header = error_header(filename);
+    perror(err_header);
+    free(err_header);
+}
+
+void print_err(const char* filename, const char* errmsg) {
+    char* err_header = error_header(filename);
+    fprintf(stderr, "%s: %s\n", err_header, errmsg);
+    free(err_header);
 }

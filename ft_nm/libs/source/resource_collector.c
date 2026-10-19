@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/17 20:38:50 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/18 22:44:04 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/19 10:04:49 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,13 +19,29 @@
 
 #include "xalloc.h"
 
+#define ALLOC_INIT_VAL 2
+
+typedef struct resource_collection {
+    int* open_fds;
+    void** allocated;
+    struct meta {
+        size_t fd_cur_idx;
+        size_t fd_arr_siz;
+        size_t fd_arr_cap;
+
+        size_t ptr_cur_idx;
+        size_t ptr_arr_siz;
+        size_t ptr_arr_cap;
+    } meta;
+} resource_collection_t;
+
 static resource_collection_t* get_instance() {
     static resource_collection_t resources = {
         .meta.fd_arr_cap = ALLOC_INIT_VAL, .meta.ptr_arr_cap = ALLOC_INIT_VAL};
     return &resources;
 }
 
-void extend_fd_arr(void) {
+static void extend_fd_arr(void) {
     resource_collection_t* rc = get_instance();
 
     int** open_fds = &rc->open_fds;
