@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/19 14:37:52 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/19 16:20:14 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,11 @@ typedef struct elf_elem_str {
     Elf64_Shdr* elems;
     Elf64_Shdr* strings;
 } elf_elem_str_t;
+
+typedef struct sym64_named {
+    char* name;
+    Elf64_Sym* sym;
+} sym64_named_t;
 
 int read_elf32(void* addr);
 int read_elf64(void* addr);

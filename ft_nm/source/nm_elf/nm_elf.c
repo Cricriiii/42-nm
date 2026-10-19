@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/19 15:29:13 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/19 17:32:34 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,61 +65,88 @@ int read_elf64(void* addr) {
 
     /* sections start */
     Elf64_Ehdr* ehdr = ehdr64(addr);
-    Elf64_Phdr* phdr_start = phdr64(addr + ehdr->e_phoff);
     Elf64_Shdr* shdr_start = shdr64(addr + ehdr->e_shoff);
-
-    /* program header array */
-    Elf64_Half phnum = ehdr->e_phnum;
-    [[maybe_unused]] Elf64_Phdr* phdr_arr[phnum + 1];
-    phdr_arr[phnum] = nullptr;
-    for (int i = 0; i < phnum; ++i) {
-        phdr_arr[i] = phdr_start + i;
-    }
 
     /* section header array */
     Elf64_Half shnum = ehdr->e_shnum;
-    [[maybe_unused]] Elf64_Shdr* shdr_arr[shnum + 1];
+    Elf64_Shdr* shdr_arr[shnum + 1];
     shdr_arr[shnum] = nullptr;
     for (int i = 0; i < shnum; ++i) {
         shdr_arr[i] = shdr_start + i;
     }
 
     /* correspondance string table <-> symbol table */
-    elf_elem_str_t sections = {};
-    sections.strings = &shdr_start[ehdr->e_shstrndx];
-
+    elf_elem_str_t sections = {.strings = &shdr_start[ehdr->e_shstrndx]};
     elf_elem_str_t symbols = {};
     elf_elem_str_t dynamic = {};
     get_symbol_sections(shdr_arr, &sections, &symbols, &dynamic);
 
-    size_t n_sym;
-    Elf64_Sym* symbol_tab;
-    char* string_tab;
-
     /* Symtab */
     printf("*** start of symtab ***\n");
 
-    n_sym = symbols.elems->sh_size / symbols.elems->sh_entsize;
-    symbol_tab = sym64(addr + symbols.elems->sh_offset);
-    string_tab = addr + symbols.strings->sh_offset;
+    size_t n_sym = symbols.elems->sh_size / symbols.elems->sh_entsize;
+    Elf64_Sym* symbol_tab = sym64(addr + symbols.elems->sh_offset);
+    char* string_tab = addr + symbols.strings->sh_offset;
+
     for (size_t i = 0; i < n_sym; ++i) {
         Elf64_Sym* s = &symbol_tab[i];
-        printf("%.16lx %s\n", s->st_value, string_tab + s->st_name);
+
+        char type;
+
+        switch (s->st_shndx) {
+            case SHN_UNDEF:
+                type = 'U';
+                break;
+            case SHN_ABS:
+                type = 'A';
+                break;
+            case SHN_COMMON:
+                type = 'C';
+                break;
+            default:
+                Elf64_Shdr* section = shdr_arr[s->st_shndx];
+
+                if (section->sh_flags & SHF_EXECINSTR) {
+                    type = 'T';
+                } else if (section->sh_type == SHT_NOBITS &&
+                           (section->sh_flags & SHF_WRITE)) {
+                    type = 'B';
+                } else if (section->sh_flags & SHF_WRITE) {
+                    type = 'D';
+                } else if (section->sh_flags & SHF_ALLOC) {
+                    type = 'R';
+                } else {
+                    type = '?';
+                }
+        }
+
+        unsigned char binding = ELF64_ST_BIND(s->st_info);
+
+        if (binding == STB_WEAK) {
+            type = 'W';
+        } else if (binding == STB_LOCAL && type != '?') {
+            type += ('a' - 'A');
+        }
+
+        printf("%.16lx %c %s\n", s->st_value, type, string_tab + s->st_name);
     }
     printf("*** end of symtab ***\n\n");
 
-    /* Dynsym */
-    printf("*** start of dynsym ***\n");
-
-    n_sym = dynamic.elems->sh_size / dynamic.elems->sh_entsize;
-    symbol_tab = sym64(addr + dynamic.elems->sh_offset);
-    string_tab = addr + dynamic.strings->sh_offset;
-    for (size_t i = 0; i < n_sym; ++i) {
-        Elf64_Sym* s = &symbol_tab[i];
-        printf("%.16lx %s\n", s->st_value, string_tab + s->st_name);
-    }
-
-    printf("*** end of dynsym ***\n\n");
-
     return retval;
 }
+
+// /* Dynsym */
+// printf("*** start of dynsym ***\n");
+
+// n_sym = dynamic.elems->sh_size / dynamic.elems->sh_entsize;
+// symbol_tab = sym64(addr + dynamic.elems->sh_offset);
+// string_tab = addr + dynamic.strings->sh_offset;
+// sym64_named_t* symbol_arr[n_sym + 1];
+// symbol_arr[n_sym] = nullptr;
+
+// for (size_t i = 0; i < n_sym; ++i) {
+//     Elf64_Sym* s = &symbol_tab[i];
+//     printf("%.16lx %s\n", s->st_value, string_tab + s->st_name);
+// }
+
+// printf("*** end of dynsym ***\n\n");
