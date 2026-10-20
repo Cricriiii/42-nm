@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 17:27:32 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 23:43:05 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,16 @@ typedef struct nm_args nm_args_t;
 
 extern nm_args_t options;
 
+/**
+ * @brief Deduce the letter displayed by nm for a symbol. The letter is
+ * uppercase for global symbols and lowercase for local ones.
+ *
+ * @param shdr Section header table.
+ * @param shnum Number of section headers.
+ * @param shstrtab Section name string table.
+ * @param s Symbol to be typed.
+ * @return int. Letter as displayed by nm.
+ */
 static int get_symbol_type(const Elf32_Shdr* shdr, Elf32_Half shnum,
                            const char* shstrtab, const Elf32_Sym* s) {
     unsigned char binding = ELF32_ST_BIND(s->st_info);
@@ -70,13 +80,19 @@ static int get_symbol_type(const Elf32_Shdr* shdr, Elf32_Half shnum,
     return c;
 }
 
+/**
+ * @brief Read the symbol table of a 32-bit ELF file. The returned array and its
+ * elements are allocated and registered in the resource collector. The first
+ * element is the null symbol, and the array is null terminated.
+ *
+ * @param addr Address of the mapped memory region.
+ * @return nm_sym_out_t**. Array of symbols, nullptr if there is no .symtab.
+ */
 nm_sym_out_t** read_elf32(void* addr) {
     nm_sym_out_t** ret_array = nullptr;
 
-    /* sections start */
     Elf32_Shdr* shdr_start = shdr32(addr + ehdr32(addr)->e_shoff);
 
-    /* section header array */
     Elf32_Half shnum = ehdr32(addr)->e_shnum;
 
     elf_link_str_32_t sections = {.strings =
@@ -96,6 +112,7 @@ nm_sym_out_t** read_elf32(void* addr) {
 
         size_t cur_sym_idx = 0;
 
+        /* Convert each raw symbol into its displayable form */
         for (size_t i = 0; i < n_sym; ++i) {
             Elf32_Sym* s = &symbol_tab[i];
 
@@ -103,8 +120,8 @@ nm_sym_out_t** read_elf32(void* addr) {
             store_ptr_resource(nm_sym);
             nm_sym->name = string_tab + s->st_name;
             nm_sym->value = s->st_value;
-            nm_sym->type = get_symbol_type(shdr_start, shnum,
-                                           addr + symbols.elems->sh_offset, s);
+            nm_sym->type = get_symbol_type(
+                shdr_start, shnum, addr + symbols.strings->sh_offset, s);
             nm_sym->external = is_external(s->st_shndx, s->st_info);
             nm_sym->undef = is_undef(s->st_shndx);
             nm_sym->arch = ARCH32;

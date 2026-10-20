@@ -6,13 +6,13 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 18:29:20 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 23:08:43 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 
 #include "file_manip.h"
 #include "nm_elf.h"
@@ -22,24 +22,26 @@
 #include "xalloc.h"
 
 /**
- * @brief Global program variables
- * @param options Contains the parsed command line arguments
- * @param options Contains the parsed command line arguments
+ * @brief Global program variables.
+ *
+ * @param options Parsed command line arguments.
+ * @param print_filename Set when several files are requested, so that each
+ * symbol list is preceded by its file name.
  */
 nm_args_t options = {};
 bool print_filename = false;
 
 /**
- * @brief This function assesses if the file is valid, its architecure and
- * displays its symbols.
+ * @brief Check the ELF class of a mapped file and display its symbols.
  *
  * @param addr Address of the mapped memory region.
- * @param file Current file path to process.
- * @return int. Error code of the last processed file.
+ * @param file Path of the file being processed.
+ * @return int. 0 on success, 1 if the file format is not recognized.
  */
 static int display_file(void* addr, char* file) {
     nm_sym_out_t** symbols;
 
+    /* The class byte of e_ident selects the 32 or 64 bit reader */
     int ei_class = ((char*)addr)[EI_DATA - 1];
     switch (ei_class) {
         case ELFCLASS32:
@@ -60,7 +62,7 @@ static int display_file(void* addr, char* file) {
         printf("\n%s:\n", file);
     print_symbols(symbols);
 
-    /* Symbols has been allocated by read_elfN. Release now. */
+    /* The symbol array was allocated by read_elfN, release it now */
     del_ptr_resource(symbols);
 
     return 0;
@@ -93,7 +95,7 @@ static int mainloop(char** files) {
             }
             continue;
         }
-        add_fd_resource(file_fd);
+        store_fd_resource(file_fd);
 
         /* Map the file into memory */
         mappedmem_t mapped = {};
@@ -115,10 +117,12 @@ static int mainloop(char** files) {
 }
 
 /**
- * @brief Constructor procedure. Initializes the garbage collector and the
- * memory allocation and print modules. Register the cleaning of desctruction of
- * the garbage collector upon exit.
+ * @brief Constructor, run before main. Register the program name in the
+ * allocation and print modules, initialize the resource collector and schedule
+ * its destruction at exit.
  *
+ * @param argc Unused.
+ * @param argv Program arguments. Only argv[0] is read.
  */
 __attribute((constructor)) void init([[maybe_unused]] int argc, char** argv) {
     xmalloc_set_program_name(*argv);
@@ -128,12 +132,11 @@ __attribute((constructor)) void init([[maybe_unused]] int argc, char** argv) {
 }
 
 /**
- * @brief MAIN procedure. Parses the command line and inits the program
- * mainloop. Also, sets the printing of the filename headers if more than one
- * file have been requested.
+ * @brief Parse the command line, then run the program main loop. File name
+ * headers are enabled when more than one file is requested.
  *
- * @param argc
- * @param argv
+ * @param argc Number of command line arguments.
+ * @param argv Command line arguments.
  * @return int. Error code of the last processed file.
  */
 int main(int argc, char** argv) {

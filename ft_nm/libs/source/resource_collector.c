@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/17 20:38:50 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 11:14:17 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 23:10:57 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,9 +21,15 @@
 
 #define ALLOC_INIT_VAL 2
 
+/**
+ * @brief Structure used by the resource collector. Each container is paired
+ * with a current index, where the next free slot search starts, a size (number
+ * of stored elements) and a capacity (number of slots).
+ *
+ */
 typedef struct resource_collection {
-    int* open_fds;
-    void** allocated;
+    int* open_fds;    /* Stored file descriptors, -1 marks a free slot */
+    void** allocated; /* Stored allocations, nullptr marks a free slot */
     struct meta {
         size_t fd_cur_idx;
         size_t fd_arr_siz;
@@ -35,12 +41,22 @@ typedef struct resource_collection {
     } meta;
 } resource_collection_t;
 
+/**
+ * @brief Get the instance of the singleton resource collector object.
+ *
+ * @return resource_collection_t* Pointer to the resource collector object.
+ */
 static resource_collection_t* get_instance() {
     static resource_collection_t resources = {
         .meta.fd_arr_cap = ALLOC_INIT_VAL, .meta.ptr_arr_cap = ALLOC_INIT_VAL};
     return &resources;
 }
 
+/**
+ * @brief Double the capacity of the file descriptor container. The new slots
+ * are marked as free.
+ *
+ */
 static void extend_fd_arr(void) {
     resource_collection_t* rc = get_instance();
 
@@ -55,6 +71,11 @@ static void extend_fd_arr(void) {
     rc->meta.fd_arr_cap = new_cap;
 }
 
+/**
+ * @brief Double the capacity of the pointer container. The new slots are
+ * marked as free.
+ *
+ */
 void extend_ptr_arr(void) {
     resource_collection_t* rc = get_instance();
 
@@ -70,9 +91,20 @@ void extend_ptr_arr(void) {
     rc->meta.ptr_arr_cap = new_cap;
 }
 
+/**
+ * @brief _Generic function choosing the proper extension given a container
+ * type.
+ *
+ */
 #define extend_arr(arr) \
     _Generic((arr), int*: extend_fd_arr, void**: extend_ptr_arr)();
 
+/**
+ * @brief Initialize the resource collector by allocating both the file
+ * descriptor and pointer containers. This function must be called prior to any
+ * other use of the collector.
+ *
+ */
 void init_resource_collector(void) {
     resource_collection_t* rc = get_instance();
 
@@ -94,9 +126,15 @@ void init_resource_collector(void) {
     }
 }
 
+/**
+ * @brief Release all the stored resources. The resource collector must be
+ * reinitialized before further use.
+ *
+ */
 void destroy_resource_collector(void) {
     resource_collection_t* rc = get_instance();
 
+    /* Release all file descriptor resources */
     int* open_fds = rc->open_fds;
     for (size_t i = 0; i < rc->meta.fd_arr_cap; ++i) {
         if (open_fds[i] != -1) {
@@ -106,6 +144,7 @@ void destroy_resource_collector(void) {
     }
     rc->meta.fd_cur_idx = 0;
 
+    /* Release all pointer resources */
     void** allocated = rc->allocated;
     for (size_t i = 0; i < rc->meta.ptr_arr_cap; ++i) {
         if (allocated[i] != nullptr) {
@@ -113,12 +152,19 @@ void destroy_resource_collector(void) {
             allocated[i] = nullptr;
         }
     }
+
+    /* Free both file descriptor and pointer containers */
     free(open_fds);
     free(allocated);
     rc->open_fds = nullptr;
     rc->allocated = nullptr;
 }
 
+/**
+ * @brief Store a memory allocation address. The container grows when full.
+ *
+ * @param ptr Address of the memory to be stored.
+ */
 void store_ptr_resource(void* ptr) {
     if (!ptr) {
         return;
@@ -127,18 +173,31 @@ void store_ptr_resource(void* ptr) {
     resource_collection_t* rc = get_instance();
 
     void** allocated = rc->allocated;
-    for (size_t i = rc->meta.ptr_cur_idx; i < rc->meta.ptr_arr_cap; ++i) {
-        if (allocated[i] == nullptr) {
-            allocated[i] = ptr;
-            rc->meta.ptr_cur_idx = ++i;
+
+    /* Grow before the scan, so that a free slot is guaranteed */
+    if (rc->meta.ptr_arr_siz == rc->meta.ptr_arr_cap) {
+        extend_arr(allocated);
+    }
+
+    /* Circular scan starting at the current index, visiting every slot once.
+     * The container may have moved, so read it from the collector. */
+    for (size_t n = 0; n < rc->meta.ptr_arr_cap; ++n) {
+        size_t i = (rc->meta.ptr_cur_idx + n) % rc->meta.ptr_arr_cap;
+        if (rc->allocated[i] == nullptr) {
+            rc->allocated[i] = ptr;
+            rc->meta.ptr_cur_idx = (i + 1) % rc->meta.ptr_arr_cap;
             ++rc->meta.ptr_arr_siz;
             return;
         }
     }
-    extend_arr(allocated);
-    store_ptr_resource(ptr);
 }
 
+/**
+ * @brief Free a stored memory allocation and release its slot. The slot is
+ * the next one to be reused. Unknown addresses are ignored.
+ *
+ * @param ptr Address of the memory to be freed.
+ */
 void del_ptr_resource(void* ptr) {
     if (!ptr) {
         return;
@@ -147,6 +206,7 @@ void del_ptr_resource(void* ptr) {
     resource_collection_t* rc = get_instance();
 
     void** allocated = rc->allocated;
+
     for (size_t i = 0; i < rc->meta.ptr_arr_cap; ++i) {
         if (allocated[i] == ptr) {
             free(allocated[i]);
@@ -158,7 +218,13 @@ void del_ptr_resource(void* ptr) {
     }
 }
 
-void add_fd_resource(int fd) {
+/**
+ * @brief Store an opened file descriptor. The only check performed is that it
+ * is greater than or equal to 0. The container grows when full.
+ *
+ * @param fd File descriptor to be stored.
+ */
+void store_fd_resource(int fd) {
     if (fd < 0) {
         return;
     }
@@ -166,26 +232,30 @@ void add_fd_resource(int fd) {
 
     int* open_fds = rc->open_fds;
 
+    /* Grow before the scan, so that a free slot is guaranteed */
     if (rc->meta.fd_arr_siz == rc->meta.fd_arr_cap) {
         extend_arr(open_fds);
-        add_fd_resource(fd);
-        return;
     }
 
-    if (rc->meta.fd_cur_idx == rc->meta.fd_arr_cap) {
-        rc->meta.fd_cur_idx = 0;
-    }
-
-    for (size_t i = rc->meta.fd_cur_idx; i < rc->meta.fd_arr_cap; ++i) {
-        if (open_fds[i] == -1) {
-            open_fds[i] = fd;
-            rc->meta.fd_cur_idx = ++i;
+    /* Circular scan starting at the current index, visiting every slot once.
+     * The container may have moved, so read it from the collector. */
+    for (size_t n = 0; n < rc->meta.fd_arr_cap; ++n) {
+        size_t i = (rc->meta.fd_cur_idx + n) % rc->meta.fd_arr_cap;
+        if (rc->open_fds[i] == -1) {
+            rc->open_fds[i] = fd;
+            rc->meta.fd_cur_idx = (i + 1) % rc->meta.fd_arr_cap;
             ++rc->meta.fd_arr_siz;
             return;
         }
     }
 }
 
+/**
+ * @brief Close a stored file descriptor and release its slot. The slot is the
+ * next one to be reused. Unknown descriptors are ignored.
+ *
+ * @param fd File descriptor to be closed.
+ */
 void del_fd_resource(int fd) {
     if (fd < 0) {
         return;

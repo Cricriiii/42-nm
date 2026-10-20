@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+/* Memory mapped region: start address and size in bytes */
 typedef struct mappedmem {
     void* addr;
     size_t size;

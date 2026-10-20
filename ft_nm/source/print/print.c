@@ -68,10 +68,10 @@ void usage(FILE* stream, int status) {
 }
 
 /**
- * @brief Intern function. Allocate and return the "program_name: filename"
- * string part of an error message.
+ * @brief Internal function. Allocate and return the "program_name: filename"
+ * part of an error message. The caller must free it.
  *
- * @return char*. The Allocated string.
+ * @return char*. The allocated string.
  */
 static char* error_header(void) {
     size_t errlen =

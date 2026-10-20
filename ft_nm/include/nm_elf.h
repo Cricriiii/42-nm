@@ -14,6 +14,7 @@
 
 #include <elf.h>
 
+/* Cast an address to the matching 32-bit or 64-bit ELF structure */
 #define ehdr32(addr) ((Elf32_Ehdr*)(addr))
 #define ehdr64(addr) ((Elf64_Ehdr*)(addr))
 
@@ -38,9 +39,11 @@
 #define nhdr32(addr) ((Elf32_Nhdr*)(addr))
 #define nhdr64(addr) ((Elf64_Nhdr*)(addr))
 
+/* Word size in bits, used to size the displayed symbol values */
 #define ARCH32 32
 #define ARCH64 64
 
+/* Fields of the e_ident array of the ELF header */
 typedef struct elf_ei {
     int32_t mag0;
     int32_t mag1;
@@ -55,6 +58,7 @@ typedef struct elf_ei {
 
 elf_ei_t read_elf_ident(void* addr);
 
+/* A table section header and the header of its linked string table */
 typedef struct elf_link_str_32 {
     Elf32_Shdr* elems;
     Elf32_Shdr* strings;
@@ -65,13 +69,14 @@ typedef struct elf_link_str_64 {
     Elf64_Shdr* strings;
 } elf_link_str_64_t;
 
+/* Symbol as displayed by nm */
 typedef struct nm_sym_out {
-    long value;
-    char* name;
-    int arch;
-    int type;
-    int external;
-    int undef;
+    long value;   /* Symbol value */
+    char* name;   /* Symbol name, points into the string table */
+    int arch;     /* ARCH32 or ARCH64 */
+    int type;     /* Letter displayed by nm */
+    int external; /* Set for external symbols */
+    int undef;    /* Set for undefined symbols */
 } nm_sym_out_t;
 
 nm_sym_out_t** read_elf32(void* addr);
