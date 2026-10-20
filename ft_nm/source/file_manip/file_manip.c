@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:21:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/19 11:13:35 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 17:17:43 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 int open_file(const char* filename) {
     int file_fd = open(filename, O_RDONLY);
     if (file_fd == -1) {
-        print_perror(filename);
+        print_perror();
     }
     return file_fd;
 }

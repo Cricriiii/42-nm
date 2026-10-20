@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 14:49:04 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 17:26:43 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,9 @@
 #define nhdr32(addr) ((Elf32_Nhdr*)(addr))
 #define nhdr64(addr) ((Elf64_Nhdr*)(addr))
 
+#define ARCH32 32
+#define ARCH64 64
+
 typedef struct elf_ei {
     int32_t mag0;
     int32_t mag1;
@@ -52,14 +55,20 @@ typedef struct elf_ei {
 
 elf_ei_t read_elf_ident(void* addr);
 
-typedef struct elf_elem_str {
+typedef struct elf_link_str_32 {
+    Elf32_Shdr* elems;
+    Elf32_Shdr* strings;
+} elf_link_str_32_t;
+
+typedef struct elf_link_str_64 {
     Elf64_Shdr* elems;
     Elf64_Shdr* strings;
-} elf_elem_str_t;
+} elf_link_str_64_t;
 
 typedef struct nm_sym_out {
     long value;
     char* name;
+    int arch;
     int type;
     int external;
     int undef;
@@ -67,3 +76,21 @@ typedef struct nm_sym_out {
 
 nm_sym_out_t** read_elf32(void* addr);
 nm_sym_out_t** read_elf64(void* addr);
+
+int is_debug_section(uint64_t section_flag, const char* name);
+int section_type_from_name(const char* name);
+int is_undef(uint64_t st_shndx);
+int is_external(uint64_t st_shndx, unsigned char st_info);
+
+int section_type_from_flags(uint64_t section_flag, uint64_t section_type,
+                            const char* name);
+
+void get_symbol_sections_32(Elf32_Shdr* shdr, Elf32_Half shnum,
+                            elf_link_str_32_t* sections,
+                            elf_link_str_32_t* symbols,
+                            elf_link_str_32_t* dynamic);
+
+void get_symbol_sections_64(Elf64_Shdr* shdr, Elf64_Half shnum,
+                            elf_link_str_64_t* sections,
+                            elf_link_str_64_t* symbols,
+                            elf_link_str_64_t* dynamic);

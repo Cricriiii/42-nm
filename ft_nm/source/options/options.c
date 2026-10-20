@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:03:37 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 14:53:02 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 18:43:51 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,11 @@
  * This section defines nm short and long options required by getopt_long,
  * alongside with the nm_args struct holding their values.
  */
+
+/**
+ * @brief Short and long form of the supported options.
+ * 
+ */
 static const char* short_options = "aghpru";
 
 static struct option long_options[] = {
@@ -31,6 +36,14 @@ static struct option long_options[] = {
     {"undefined-only", no_argument, nullptr, 'u'},
     {nullptr, 0, nullptr, 0}};
 
+/**
+ * @brief Parse an array of options according to the user defined option support.
+ * 
+ * @param n_args Total number of options.
+ * @param args Array of null terminated strings: the options.
+ * @param out Flag structure filled by the parser.
+ * @return int. Returns 0 on success, -1 on failure.
+ */
 int get_options(int n_args, char** args, nm_args_t* out) {
     int opt;
 
@@ -63,7 +76,7 @@ int get_options(int n_args, char** args, nm_args_t* out) {
                 break;
 
             default:
-                return usage(stderr, -1), -1;
+                return usage(stderr, 1), -1;
         }
     }
 
