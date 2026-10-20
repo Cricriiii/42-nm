@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/17 20:38:50 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/19 10:04:49 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 11:14:17 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,7 +119,11 @@ void destroy_resource_collector(void) {
     rc->allocated = nullptr;
 }
 
-void add_ptr_resource(void* ptr) {
+void store_ptr_resource(void* ptr) {
+    if (!ptr) {
+        return;
+    }
+
     resource_collection_t* rc = get_instance();
 
     void** allocated = rc->allocated;
@@ -132,10 +136,14 @@ void add_ptr_resource(void* ptr) {
         }
     }
     extend_arr(allocated);
-    add_ptr_resource(ptr);
+    store_ptr_resource(ptr);
 }
 
 void del_ptr_resource(void* ptr) {
+    if (!ptr) {
+        return;
+    }
+
     resource_collection_t* rc = get_instance();
 
     void** allocated = rc->allocated;
@@ -179,6 +187,10 @@ void add_fd_resource(int fd) {
 }
 
 void del_fd_resource(int fd) {
+    if (fd < 0) {
+        return;
+    }
+
     resource_collection_t* rc = get_instance();
 
     int* open_fds = rc->open_fds;

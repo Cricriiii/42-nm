@@ -6,12 +6,14 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/19 12:18:42 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/20 14:58:02 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "file_manip.h"
 #include "nm_elf.h"
@@ -20,21 +22,86 @@
 #include "resource_collector.h"
 #include "xalloc.h"
 
-static char* program_name; /* The name used to invoke the program */
+/* The name used to invoke the program */
+static char* program_name; 
 
+/* Options parsed from the command line */
 nm_args_t options = {};
+
+int set_print_file_names;
+
+int compare_on_name(const void* a, const void* b) {
+    const char* s1 = (*(const nm_sym_out_t**)a)->name;
+    const char* s2 = (*(const nm_sym_out_t**)b)->name;
+
+    while (*s1 && *s1 == '_') ++s1;
+    while (*s2 && *s2 == '_') ++s2;
+
+    while (*s1 && toupper(*s1) == toupper(*s2)) {
+        ++s1;
+        ++s2;
+    }
+
+    if (options.rsort) {
+        return toupper(*s2) - toupper(*s1);
+    } else {
+        return toupper(*s1) - toupper(*s2);
+    }
+}
 
 static int display_file(void* addr, char* file) {
     int retval = 0;
     int ei_class = ((char*)addr)[EI_DATA - 1];
+    [[maybe_unused]] nm_sym_out_t** symbols = nullptr;
 
     switch (ei_class) {
         case ELFCLASS32:
-            read_elf32(addr);
+            symbols = read_elf32(addr);
             break;
 
         case ELFCLASS64:
-            read_elf64(addr);
+            printf("\n%s:\n", file);
+
+            symbols = read_elf64(addr);
+            nm_sym_out_t **ptr = symbols;
+
+            if (!symbols) {
+                print_err(file, "no symbols");
+                break;
+            }
+            
+            while (*ptr) ++ptr;
+            if (!options.no_sort) {
+                qsort(symbols + 1, ptr - symbols - 1, sizeof(nm_sym_out_t*), compare_on_name);
+            }
+            
+            for (nm_sym_out_t** s = symbols + 1; *s; ++s) {
+                if (!options.debug_syms && (*s)->type == 'a') {
+                    continue;
+                }
+
+                if (options.extern_only && !(*s)->external) {
+                    continue;
+                }
+
+                if (options.undef_only && !(*s)->undef) {
+                    continue;
+                }
+
+                size_t len_buf = strlen((*s)->name) + 20;
+                char buf[len_buf - 1];
+                memset(buf, 0, len_buf);
+                
+                if ((*s)->value || (*s)->type == 'a') {
+                    sprintf(buf, "%.16lx %c %s", (*s)->value, (*s)->type, (*s)->name);
+                } else {
+                    sprintf(buf, "                 %c %s", (*s)->type, (*s)->name);
+                }
+                printf("%s\n", buf);
+                del_ptr_resource(*s);
+                continue;
+            }
+            /* Don't forget stripped files */
             break;
 
         default:
@@ -42,6 +109,7 @@ static int display_file(void* addr, char* file) {
             print_err(file, "file format not recognized");
             break;
     }
+    del_ptr_resource(symbols);
     return retval;
 }
 
@@ -76,6 +144,7 @@ int main(int argc, char** argv) {
     if (get_options(argc, argv, &options) == -1) {
         return 1;
     }
+    set_print_file_names = (options.files[0] != nullptr && options.files[1] != nullptr);
     return mainloop(options.files);
 }
 
