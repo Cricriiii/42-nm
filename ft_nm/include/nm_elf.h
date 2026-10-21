@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 17:26:43 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/21 13:39:12 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,12 +90,10 @@ int is_external(uint64_t st_shndx, unsigned char st_info);
 int section_type_from_flags(uint64_t section_flag, uint64_t section_type,
                             const char* name);
 
-void get_symbol_sections_32(Elf32_Shdr* shdr, Elf32_Half shnum,
-                            elf_link_str_32_t* sections,
-                            elf_link_str_32_t* symbols,
-                            elf_link_str_32_t* dynamic);
+__attribute((nonnull(1, 3))) void get_symbol_sections_32(
+    Elf32_Shdr* shdr, Elf32_Half shnum, elf_link_str_32_t* sections,
+    elf_link_str_32_t* symbols, elf_link_str_32_t* dynamic);
 
-void get_symbol_sections_64(Elf64_Shdr* shdr, Elf64_Half shnum,
-                            elf_link_str_64_t* sections,
-                            elf_link_str_64_t* symbols,
-                            elf_link_str_64_t* dynamic);
+__attribute((nonnull(1, 3))) void get_symbol_sections_64(
+    Elf64_Shdr* shdr, Elf64_Half shnum, elf_link_str_64_t* sections,
+    elf_link_str_64_t* symbols, elf_link_str_64_t* dynamic);

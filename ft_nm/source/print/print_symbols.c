@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 23:32:27 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/21 18:00:39 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,16 +87,20 @@ void print_symbols(nm_sym_out_t** symbols) {
             continue;
         }
 
-        size_t len_buf = strlen((*s)->name) + ((*s)->arch >> 2) + 3;
+        int arch = (*s)->arch;
+        size_t len_buf = strlen((*s)->name) + (arch >> 2) + 3;
         char buf[len_buf];
         memset(buf, 0, len_buf);
 
         /* Symbols without a value get blank padding instead of an address */
         if ((*s)->value || (*s)->type == 'a') {
-            sprintf(buf, "%.*lx %c %s", (*s)->arch >> 2, (*s)->value,
+            sprintf(buf, "%.*lx %c %s", (arch >> 2), (*s)->value,
                     (*s)->type, (*s)->name);
         } else {
-            sprintf(buf, "                 %c %s", (*s)->type, (*s)->name);
+            if (arch == ARCH64) {
+                sprintf(buf, "        ");
+            }            
+            sprintf(buf, "         %c %s", (*s)->type, (*s)->name);
         }
         printf("%s\n", buf);
 

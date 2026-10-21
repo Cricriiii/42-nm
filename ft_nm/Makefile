@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/20 17:33:02 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/21 18:30:13 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,6 +16,7 @@
 # ---------------------------------------------------------------------------- #
 
 CC			:= cc
+CC32		:= $(CC) -m32
 
 C_STD		:= -std=c23
 C_ERR		:= -Wall -Wextra -Werror
@@ -31,17 +32,22 @@ MAKEFLAGS	+= -j $(shell nproc)
 # ---------------------------------------------------------------------------- #
 
 PROGRAM		?= ft_nm
+PROGRAM32	:= $(PROGRAM)32
 WORKSPACE	?= $(CURDIR)
 
 SRC_DIR		:= $(WORKSPACE)/source
 LIB_DIR		:= $(WORKSPACE)/libs/source
 OBJ_DIR		:= $(WORKSPACE)/.object
+OBJ_DIR_x64	:= $(OBJ_DIR)/x64
+OBJ_DIR_x86	:= $(OBJ_DIR)/x86
 
 FILES_C		:= $(shell find $(SRC_DIR) -type f -name '*.c')
-FILES_O		:= $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(FILES_C))
+FILES_O_x64	:= $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR_x64)/%.o, $(FILES_C))
+FILES_O_x86	:= $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR_x86)/%.o, $(FILES_C))
 
 LIBS_C		:= $(shell find $(LIB_DIR) -type f -name '*.c')
-FILES_O		+= $(patsubst $(LIB_DIR)/%.c, $(OBJ_DIR)/libs/%.o, $(LIBS_C))
+FILES_O_x64	+= $(patsubst $(LIB_DIR)/%.c, $(OBJ_DIR_x64)/libs/%.o, $(LIBS_C))
+FILES_O_x86	+= $(patsubst $(LIB_DIR)/%.c, $(OBJ_DIR_x86)/libs/%.o, $(LIBS_C))
 
 INCLUDES	:= $(WORKSPACE)/include
 INCLUDES	+= $(WORKSPACE)/libs/include
@@ -51,22 +57,38 @@ INCLUDES	:= $(INCLUDES:%=-I %)
 # build                                                                        #
 # ---------------------------------------------------------------------------- #
 
-## Build the program
+## Build the 64-bit program
 all:
 	+$(MAKE) $(PROGRAM)
 
-$(PROGRAM): $(FILES_O)
+$(PROGRAM): $(FILES_O_x64)
 	$(CC) $(C_FLAGS) $(INCLUDES) $^ -o $@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJ_DIR_x64)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(C_FLAGS) $(INCLUDES) -c $< -o $@
 
-$(OBJ_DIR)/libs/%.o: $(LIB_DIR)/%.c
+$(OBJ_DIR_x64)/libs/%.o: $(LIB_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(C_FLAGS) $(INCLUDES) -c $< -o $@
 
--include $(FILES_O:.o=.d)
+## Build the 32-bit program
+x86:
+	+$(MAKE) $(PROGRAM32)
+	
+$(PROGRAM32): $(FILES_O_x86)
+	$(CC32) $(C_FLAGS) $(INCLUDES) $^ -o $@
+
+$(OBJ_DIR_x86)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(@D)
+	$(CC32) $(C_FLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJ_DIR_x86)/libs/%.o: $(LIB_DIR)/%.c
+	@mkdir -p $(@D)
+	$(CC32) $(C_FLAGS) $(INCLUDES) -c $< -o $@
+
+-include $(FILES_O_x64:.o=.d)
+-include $(FILES_O_x86:.o=.d)
 
 ## Call 'fclean' then 'all'
 re:
@@ -85,7 +107,7 @@ clean:
 # Call 'clean' and delete executable
 fclean:
 	+$(MAKE) clean
-	@rm -f $(WORKSPACE)/$(PROGRAM)
+	@rm -f $(WORKSPACE)/$(PROGRAM) $(WORKSPACE)/$(PROGRAM32)
 
 # ---------------------------------------------------------------------------- #
 # misc                                                                         #
@@ -110,4 +132,4 @@ help:
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
 	@echo
 
-.PHONY: all re clean fclean format help
+.PHONY: all x86 re clean fclean format help

@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 15:01:18 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 23:25:54 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/21 13:24:06 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -191,10 +191,9 @@ void get_symbol_sections_32(Elf32_Shdr* shdr, Elf32_Half shnum,
  * @param symbols Filled with .symtab and its string table.
  * @param dynamic Filled with .dynsym and its string table.
  */
-void get_symbol_sections_64(Elf64_Shdr* shdr, Elf64_Half shnum,
-                            elf_link_str_64_t* sections,
-                            elf_link_str_64_t* symbols,
-                            elf_link_str_64_t* dynamic) {
+void get_symbol_sections_64(
+    Elf64_Shdr* shdr, Elf64_Half shnum, elf_link_str_64_t* sections,
+    elf_link_str_64_t* symbols, elf_link_str_64_t* dynamic) {
     for (Elf64_Half i = 0; i < shnum; ++i) {
         Elf64_Shdr* s = &shdr[i];
 
@@ -203,13 +202,17 @@ void get_symbol_sections_64(Elf64_Shdr* shdr, Elf64_Half shnum,
 
         } else if (s->sh_type == SHT_SYMTAB) {
             /* in .symtab, read .strtab index */
-            (*symbols).elems = s;
-            (*symbols).strings = &shdr[s->sh_link];
+            if (symbols) {
+                (*symbols).elems = s;
+                (*symbols).strings = &shdr[s->sh_link];
+            }
 
         } else if (s->sh_type == SHT_DYNSYM) {
             /* in .dynsym, read .dynstr index */
-            (*dynamic).elems = s;
-            (*dynamic).strings = &shdr[s->sh_link];
+            if (dynamic) {
+                (*dynamic).elems = s;
+                (*dynamic).strings = &shdr[s->sh_link];
+            }
         }
     }
 }

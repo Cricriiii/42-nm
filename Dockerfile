@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:43 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/10 00:47:49 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/21 17:44:44 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,13 +17,15 @@ ARG VERSION_TAG="1.0"
 # ---------------------------------------------------------------------------- #
 # development environment                                                      #
 # ---------------------------------------------------------------------------- #
-FROM fedora:44 AS dev
+FROM fedora:43 AS dev
 
 ARG SOURCE
 ARG WORKSPACE
 
 RUN dnf install -y \
         gcc \
+        glibc-devel.i686 \
+        glibc-static.i686 \
         make \
         valgrind \
         binutils \
@@ -44,7 +46,7 @@ CMD ["/bin/zsh"]
 # ---------------------------------------------------------------------------- #
 # production environment                                                       #
 # ---------------------------------------------------------------------------- #
-FROM fedora:44 AS prod
+FROM fedora:43 AS prod
 
 ARG SOURCE
 ARG WORKSPACE

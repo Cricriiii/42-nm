@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:13:42 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 18:37:37 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/21 13:20:07 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,12 +47,12 @@ void print_set_filename(const char* fname) {
 }
 
 /**
- * @brief Print usage and quit on a given status code value.
+ * @brief Print usage and terminate the program with the status value.
  *
  * @param stream Output FILE* stream.
  * @param status Exit code value.
  */
-void usage(FILE* stream, int status) {
+[[noreturn]] void usage(FILE* stream, int status) {
     fprintf(stream, "Usage: %s [option(s)] [file(s)]\n", program_name);
     fprintf(stream, " List symbols in [file(s)] (a.out by default).\n");
     fprintf(stream,

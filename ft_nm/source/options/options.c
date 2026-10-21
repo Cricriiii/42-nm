@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:03:37 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 22:30:26 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/21 12:38:28 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ static struct option long_options[] = {
  * @param n_args Number of command line arguments.
  * @param args Array of null terminated strings: the arguments.
  * @param out Option structure filled by the parser.
- * @return int. Returns 0 on success, -1 on failure.
+ * @return int. Returns 0 on success, exits on usage() on error.
  */
 int get_options(int n_args, char** args, nm_args_t* out) {
     int opt;
@@ -73,12 +73,11 @@ int get_options(int n_args, char** args, nm_args_t* out) {
                 break;
 
             default:
-                return usage(stderr, 1), -1;
+                usage(stderr, 1);
         }
     }
 
-    /* Remaining arguments are file paths. If none is provided, default to
-     * a.out. */
+    /* Remaining arguments are file paths. If none, default to a.out. */
     if (*(args + optind)) {
         out->files = args + optind;
     } else {
