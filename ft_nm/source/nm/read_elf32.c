@@ -119,10 +119,9 @@ nm_sym_out_t** read_elf32(void* addr) {
 
             nm_sym_out_t* nm_sym = xcalloc(1, sizeof(nm_sym_out_t));
             store_ptr_resource(nm_sym);
-            nm_sym->name = is_section
-                               ? addr + sections.strings->sh_offset +
-                                     shdr_start[s->st_shndx].sh_name
-                               : string_tab + s->st_name;
+            nm_sym->name = is_section ? addr + sections.strings->sh_offset +
+                                            shdr_start[s->st_shndx].sh_name
+                                      : string_tab + s->st_name;
             nm_sym->value = s->st_value;
             nm_sym->type = get_symbol_type(
                 shdr_start, shnum, addr + sections.strings->sh_offset, s);

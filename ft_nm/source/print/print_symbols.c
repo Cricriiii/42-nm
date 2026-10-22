@@ -56,8 +56,7 @@ static int compare_on_name(const void* a, const void* b) {
         return options.rsort ? -result : result;
     }
 
-    result = strcmp((*(nm_sym_out_t**)a)->name,
-                    (*(nm_sym_out_t**)b)->name);
+    result = strcmp((*(nm_sym_out_t**)a)->name, (*(nm_sym_out_t**)b)->name);
     return options.rsort ? -result : result;
 }
 

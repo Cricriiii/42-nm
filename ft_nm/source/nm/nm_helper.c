@@ -191,9 +191,10 @@ void get_symbol_sections_32(Elf32_Shdr* shdr, Elf32_Half shnum,
  * @param symbols Filled with .symtab and its string table.
  * @param dynamic Filled with .dynsym and its string table.
  */
-void get_symbol_sections_64(
-    Elf64_Shdr* shdr, Elf64_Half shnum, elf_link_str_64_t* sections,
-    elf_link_str_64_t* symbols, elf_link_str_64_t* dynamic) {
+void get_symbol_sections_64(Elf64_Shdr* shdr, Elf64_Half shnum,
+                            elf_link_str_64_t* sections,
+                            elf_link_str_64_t* symbols,
+                            elf_link_str_64_t* dynamic) {
     for (Elf64_Half i = 0; i < shnum; ++i) {
         Elf64_Shdr* s = &shdr[i];
 
