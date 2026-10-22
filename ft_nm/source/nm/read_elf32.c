@@ -115,16 +115,21 @@ nm_sym_out_t** read_elf32(void* addr) {
         /* Convert each raw symbol into its displayable form */
         for (size_t i = 0; i < n_sym; ++i) {
             Elf32_Sym* s = &symbol_tab[i];
+            bool is_section = ELF32_ST_TYPE(s->st_info) == STT_SECTION;
 
             nm_sym_out_t* nm_sym = xcalloc(1, sizeof(nm_sym_out_t));
             store_ptr_resource(nm_sym);
-            nm_sym->name = string_tab + s->st_name;
+            nm_sym->name = is_section
+                               ? addr + sections.strings->sh_offset +
+                                     shdr_start[s->st_shndx].sh_name
+                               : string_tab + s->st_name;
             nm_sym->value = s->st_value;
             nm_sym->type = get_symbol_type(
-                shdr_start, shnum, addr + symbols.strings->sh_offset, s);
+                shdr_start, shnum, addr + sections.strings->sh_offset, s);
             nm_sym->external = is_external(s->st_shndx, s->st_info);
             nm_sym->undef = is_undef(s->st_shndx);
             nm_sym->arch = ARCH32;
+            nm_sym->section = is_section;
 
             ret_array[cur_sym_idx++] = nm_sym;
         }

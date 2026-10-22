@@ -77,6 +77,7 @@ typedef struct nm_sym_out {
     int type;     /* Letter displayed by nm */
     int external; /* Set for external symbols */
     int undef;    /* Set for undefined symbols */
+    int section;  /* Set for STT_SECTION symbols */
 } nm_sym_out_t;
 
 nm_sym_out_t** read_elf32(void* addr);

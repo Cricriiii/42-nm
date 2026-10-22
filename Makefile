@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/11 23:27:54 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/22 16:57:54 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -33,6 +33,8 @@ IMAGE_TAG		+= $(PROGRAM)_$(VERSION)
 
 WORKSPACE_LOCAL	+= $(CURDIR)/$(PROGRAM)
 WORKSPACE_DOCK	+= /$(PROGRAM)
+
+TEST_DIR		:= $(CURDIR)/test
 
 TARGET			?= dev
 
@@ -70,15 +72,34 @@ re:
 lre:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) re
 
+
+# ---------------------------------------------------------------------------- #
+# test                                                                         #
+# ---------------------------------------------------------------------------- #
+
+## Test ft_nm ouput against the real one
+T_PROG		?=
+T_ARGS		?=
+test:
+	@mkdir -p $(TEST_DIR)
+	@nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt
+	@$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt
+	@diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm || true
+	
+
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
 # ---------------------------------------------------------------------------- #
 
 ## clean
 clean:
+	+$(MAKE) lclean
 
 ## fclean
 fclean:
+	@rm -rf $(TEST_DIR)
+	+$(MAKE) lfclean
+
 
 ## local clean
 lclean:
@@ -118,4 +139,4 @@ help:
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
 	@echo
 
-.PHONY: all run local re lre clean lclean fclean lfclean reset lreset format help
+.PHONY: all run test local re lre clean lclean fclean lfclean reset lreset format help
