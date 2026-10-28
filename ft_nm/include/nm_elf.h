@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/21 13:39:12 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/28 18:57:54 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,6 +69,54 @@ typedef struct elf_link_str_64 {
     Elf64_Shdr* strings;
 } elf_link_str_64_t;
 
+typedef struct elf_link_str {
+    ElfN_Shdr* elems;
+    ElfN_Shdr* strings;
+} elf_link_str_t;
+
+/* Arch-independant structure */
+typedef Elf64_Half ElfN_Half;
+typedef Elf64_Word ElfN_Word;
+typedef Elf64_Word ElfN_Word;
+typedef Elf64_Xword ElfN_Xword;
+typedef Elf64_Addr ElfN_Addr;
+typedef Elf64_Off ElfN_Off;
+typedef Elf64_Xword ElfN_Xword;
+typedef Elf64_Word ElfN_Word;
+typedef Elf64_Word ElfN_Word;
+typedef Elf64_Xword ElfN_Xword;
+typedef Elf64_Xword ElfN_Xword;
+
+typedef struct {
+    unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
+    ElfN_Half e_type;                 /* Object file type */
+    ElfN_Half e_machine;              /* Architecture */
+    ElfN_Word e_version;              /* Object file version */
+    ElfN_Addr e_entry;                /* Entry point virtual address */
+    ElfN_Off e_phoff;                 /* Program header table file offset */
+    ElfN_Off e_shoff;                 /* Section header table file offset */
+    ElfN_Word e_flags;                /* Processor-specific flags */
+    ElfN_Half e_ehsize;               /* ELF header size in bytes */
+    ElfN_Half e_phentsize;            /* Program header table entry size */
+    ElfN_Half e_phnum;                /* Program header table entry count */
+    ElfN_Half e_shentsize;            /* Section header table entry size */
+    ElfN_Half e_shnum;                /* Section header table entry count */
+    ElfN_Half e_shstrndx;             /* Section header string table index */
+} ElfN_Ehdr;
+
+typedef struct {
+    ElfN_Word sh_name;       /* Section name (string tbl index) */
+    ElfN_Word sh_type;       /* Section type */
+    ElfN_Xword sh_flags;     /* Section flags */
+    ElfN_Addr sh_addr;       /* Section virtual addr at execution */
+    ElfN_Off sh_offset;      /* Section file offset */
+    ElfN_Xword sh_size;      /* Section size in bytes */
+    ElfN_Word sh_link;       /* Link to another section */
+    ElfN_Word sh_info;       /* Additional section information */
+    ElfN_Xword sh_addralign; /* Section alignment */
+    ElfN_Xword sh_entsize;   /* Entry size if section holds table */
+} ElfN_Shdr;
+
 /* Symbol as displayed by nm */
 typedef struct nm_sym_out {
     long value;   /* Symbol value */
@@ -82,6 +130,7 @@ typedef struct nm_sym_out {
 
 nm_sym_out_t** read_elf32(void* addr);
 nm_sym_out_t** read_elf64(void* addr);
+nm_sym_out_t** read_elfN(void* addr);
 
 int is_debug_section(uint64_t section_flag, const char* name);
 int section_type_from_name(const char* name);
@@ -98,3 +147,9 @@ __attribute((nonnull(1, 3))) void get_symbol_sections_32(
 __attribute((nonnull(1, 3))) void get_symbol_sections_64(
     Elf64_Shdr* shdr, Elf64_Half shnum, elf_link_str_64_t* sections,
     elf_link_str_64_t* symbols, elf_link_str_64_t* dynamic);
+
+
+#define is_elf_mag(addr) memcmp((addr), "\x7f" "ELF", 4)
+    
+int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic);
+int Shdr_to_generic(void* addr, ElfN_Shdr* generic);

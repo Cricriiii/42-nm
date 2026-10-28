@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/22 17:47:07 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/28 18:56:02 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,36 +40,16 @@ bool print_filename = false;
  * @return int. 0 on success, 1 if the file format is not recognized.
  */
 static int display_file(void* addr, char* file) {
-    nm_sym_out_t** symbols;
-
     /* Test the start of the file against 0x7f ELF*/
-    if (memcmp(addr, "\x7f" "ELF", 4)) {
+    if (is_elf_mag(addr)) {
         return print_err("file format not recognized"), 1;
     }
+
+    /* Verify file format */
+
     
-    /* The class byte of e_ident selects the 32 or 64 bit reader */
-    int ei_class = ((char*)addr)[EI_CLASS];
-    switch (ei_class) {
-        case ELFCLASS32:
-            if (ehdr32(addr)->e_machine != EM_386) {
-                print_err("file format not recognized");
-                return 1;
-            }
-            symbols = read_elf32(addr);
-            break;
-
-        case ELFCLASS64:
-            if (ehdr64(addr)->e_machine != EM_X86_64) {
-                print_err("file format not recognized");
-                return 1;
-            }
-            symbols = read_elf64(addr);
-            break;
-
-        default:
-            print_err("file format not recognized");
-            return 1;
-    }
+    /* Read arch-independant ELF file */
+    nm_sym_out_t** symbols = read_elfN(addr);
 
     /* Output values on stdout */
     if (print_filename)
@@ -81,6 +61,7 @@ static int display_file(void* addr, char* file) {
 
     return 0;
 }
+
 
 /**
  * @brief Program's core loop. Sequentially open, map and display each requested
