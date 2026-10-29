@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:13:53 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 14:08:26 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 17:38:58 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 #include <stdio.h>
 
 typedef struct nm_sym_out elf_sym_print;
+
+void set_symbol_locale(int locale);
 
 void print_set_program_name(const char* pname);
 void print_set_filename(const char* fname);

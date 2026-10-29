@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 15:35:00 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 17:45:25 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,6 +46,56 @@ elf_ei_t read_elf_ident(void* addr) {
 }
 
 /**
+ * @brief Get the symbol sections object
+ *
+ * @param addr
+ * @param sections
+ * @param symbols
+ * @param dynamic
+ */
+static void get_symbol_sections(void* addr, elf_link_str_t* sections,
+                                elf_link_str_t* symbols,
+                                elf_link_str_t* dynamic) {
+    ElfN_Ehdr ehdr = {};
+    Ehdr_to_generic(addr, &ehdr);
+
+    size_t shdr_size =
+        arch_global == ARCH64 ? sizeof(Elf64_Shdr) : sizeof(Elf32_Shdr);
+
+    for (ElfN_Half i = 0; i < ehdr.e_shnum; ++i) {
+        ElfN_Shdr s = {};
+        Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * i, &s);
+
+        if (i == ehdr.e_shstrndx) {
+            /* get e_shstrndx from ehdr */
+            if (sections) {
+                (*sections).elems = (ElfN_Shdr){};
+                (*sections).strings = s;
+                (*sections).is = 1;
+            }
+
+        } else if (s.sh_type == SHT_SYMTAB) {
+            /* in .symtab, read .strtab index */
+            if (symbols) {
+                (*symbols).elems = s;
+                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.sh_link,
+                                &(*symbols).strings);
+                (*symbols).is = 1;
+            }
+
+        } else if (s.sh_type == SHT_DYNSYM) {
+            /* in .dynsym, read .dynstr index */
+            if (dynamic) {
+                (*dynamic).elems = s;
+                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.sh_link,
+                                &(*dynamic).strings);
+                (*dynamic).is = 1;
+            }
+        }
+    }
+}
+
+/**
  * @brief Read the symbol table of a 64-bit ELF file. The returned array and its
  * elements are allocated and registered in the resource collector. The first
  * element is the null symbol, and the array is null terminated.
@@ -75,9 +125,16 @@ elf_sym_print** read_elfN(void* addr) {
 
         size_t cur_sym_idx = 0;
 
-        size_t sym_size =
-            arch_global == ARCH64 ? sizeof(Elf64_Sym) : sizeof(Elf32_Sym);
+        size_t shdr_size, sym_size;
 
+        if (arch_global == ARCH64) {
+            shdr_size = sizeof(Elf64_Shdr);
+            sym_size = sizeof(Elf64_Sym);
+        } else {
+            shdr_size = sizeof(Elf32_Shdr);
+            sym_size = sizeof(Elf32_Sym);
+        }
+        
         /* Convert each raw symbol into its displayable form */
         for (size_t i = 0; i < n_sym; ++i) {
             /* obtain symbol data */
@@ -92,19 +149,23 @@ elf_sym_print** read_elfN(void* addr) {
             nm_sym->arch = arch_global;
 
             /* symbol section */
-            nm_sym->section =
-                arch_global ==
-                ((ARCH64 ? ELF64_ST_TYPE(s.st_info)
-                         : ELF32_ST_TYPE(s.st_info)) == STT_SECTION);
+            nm_sym->section = ((arch_global == ARCH64
+                                    ? ELF64_ST_TYPE(s.st_info)
+                                    : ELF32_ST_TYPE(s.st_info)) == STT_SECTION);
 
-            /* symbol name */
-            nm_sym->name = addr + symbols.strings.sh_offset + s.st_name;
+            if (nm_sym->section) {
+                ElfN_Shdr sym_section = {};
+                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.st_shndx, &sym_section);
+                nm_sym->name = addr + sections.strings.sh_offset + sym_section.sh_name;
+            } else {
+                nm_sym->name = addr + symbols.strings.sh_offset + s.st_name;;
+            }
 
             /* symbol value */
             nm_sym->value = s.st_value;
 
             /* symbol type */
-            nm_sym->type = get_symbol_type(addr, &symbols, ehdr.e_shnum, &s);
+            nm_sym->type = get_symbol_type(addr, &sections, ehdr.e_shnum, &s);
 
             /* symbol external */
             nm_sym->external = is_external(s.st_shndx, s.st_info);

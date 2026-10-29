@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 14:08:26 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 17:40:03 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,10 @@
 #include "options.h"
 #include "print.h"
 #include "resource_collector.h"
+
+void set_symbol_locale(int locale) {
+    setlocale(locale, "");
+}
 
 /* Parsed command line options, defined in main.c */
 typedef struct nm_args nm_args_t;
@@ -40,15 +44,6 @@ static int compare_on_name(const void* a, const void* b) {
     const char* s1 = (*(const elf_sym_print**)a)->name;
     const char* s2 = (*(const elf_sym_print**)b)->name;
 
-    /* Skip leading '_' */
-    while (*s1 && *s1 == '_') {
-        ++s1;
-    }
-    while (*s2 && *s2 == '_') {
-        ++s2;
-    }
-
-    setlocale(LC_ALL, "");
     int result = strcoll(s1, s2);
 
     /* If strings are equal, compare the original names */

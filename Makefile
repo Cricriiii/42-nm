@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/22 17:19:55 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/29 17:48:21 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -34,7 +34,7 @@ IMAGE_TAG		+= $(PROGRAM)_$(VERSION)
 WORKSPACE_LOCAL	+= $(CURDIR)/$(PROGRAM)
 WORKSPACE_DOCK	+= /$(PROGRAM)
 
-TEST_DIR		:= $(CURDIR)/test
+TEST_DIR		:= $(CURDIR)/.test
 
 TARGET			?= dev
 
@@ -82,8 +82,8 @@ T_PROG		?=
 T_ARGS		?=
 test:
 	@mkdir -p $(TEST_DIR)
-	@nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt || true
-	@$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt || true
+	@time nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt || true
+	@time $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt || true
 	@diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm || true
 	
 

@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 14:08:26 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 17:39:47 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 
 #include "file_manip.h"
 #include "nm_elf.h"
@@ -118,6 +119,7 @@ static int mainloop(char** files) {
  * @param argv Program arguments. Only argv[0] is read.
  */
 __attribute((constructor)) void init([[maybe_unused]] int argc, char** argv) {
+    set_symbol_locale(LC_ALL);
     xmalloc_set_program_name(*argv);
     print_set_program_name(*argv);
     init_resource_collector();

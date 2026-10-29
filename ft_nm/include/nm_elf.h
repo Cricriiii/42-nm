@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 15:36:07 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 16:37:53 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -137,9 +137,6 @@ typedef struct elf_link_str {
     int is;
 } elf_link_str_t;
 
-void get_symbol_sections(void* addr, elf_link_str_t* sections,
-                         elf_link_str_t* symbols, elf_link_str_t* dynamic);
-
 #define is_elf_mag(addr) \
     memcmp((addr),       \
            "\x7f"        \
@@ -150,13 +147,11 @@ elf_sym_print** read_elf32(void* addr);
 elf_sym_print** read_elf64(void* addr);
 elf_sym_print** read_elfN(void* addr);
 
-int is_debug_section(uint64_t section_flag, const char* name);
+int is_debug_section(ElfN_Xword section_flag, const char* name);
 int section_type_from_name(const char* name);
-int is_undef(uint64_t st_shndx);
-int is_external(uint64_t st_shndx, unsigned char st_info);
+int is_undef(ElfN_Section st_shndx);
+int is_external(ElfN_Section st_shndx, unsigned char st_info);
 
-int section_type_from_flags(uint64_t section_flag, uint64_t section_type,
-                            const char* name);
 int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
                     ElfN_Half shnum, const ElfN_Sym* s);
 

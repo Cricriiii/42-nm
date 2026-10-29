@@ -25,6 +25,8 @@ tmp
 temp
 .tmp
 .tested
+.test
+.tests
 
 # ============================================================
 # Compilation
