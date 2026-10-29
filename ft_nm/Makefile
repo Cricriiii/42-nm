@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/29 17:43:18 by cgajean          ###   ########.fr        #
+#    Updated: 2026/10/29 18:13:20 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,12 +19,14 @@ CC			:= cc
 CC32		:= $(CC) -m32
 
 C_STD		:= -std=c23
-C_OPT		:= #-O3
+C_OPT		:= -O3
 C_ERR		:= -Wall -Wextra -Werror
 C_DBG		:= -g3
 C_DEP		:= -MD -MMD
 
-C_FLAGS		:= $(C_STD) $(C_OPT) $(C_ERR) $(C_DBG) $(C_DEP)
+C_PROF		:= -pg
+
+C_FLAGS		:= $(C_STD) $(C_OPT) $(C_ERR) $(C_DBG) $(C_DEP) $(C_PROF)
 
 MAKEFLAGS	+= -j $(shell nproc)
 

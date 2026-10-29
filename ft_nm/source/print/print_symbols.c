@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 17:40:03 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 18:15:25 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,13 +45,6 @@ static int compare_on_name(const void* a, const void* b) {
     const char* s2 = (*(const elf_sym_print**)b)->name;
 
     int result = strcoll(s1, s2);
-
-    /* If strings are equal, compare the original names */
-    if (result != 0) {
-        return options.rsort ? -result : result;
-    }
-
-    result = strcmp((*(elf_sym_print**)a)->name, (*(elf_sym_print**)b)->name);
     return options.rsort ? -result : result;
 }
 
@@ -106,6 +99,7 @@ void print_symbols(elf_sym_print** symbols) {
         }
         printf("%s\n", buf);
 
-        del_ptr_resource(*s);
+        /* Suppressed, this increase dramatically the execution time */
+        // del_ptr_resource(*s);
     }
 }
