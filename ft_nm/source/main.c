@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 18:42:49 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 23:34:49 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,7 +97,7 @@ static int mainloop(char** files) {
         del_fd_resource(file_fd);
 
         /* Display ELF symbols */
-        if (elf_format_compliance(mapped.addr) != -1) {
+        if (elf_format_compliance(&mapped) != -1) {
             retval = display_file(mapped.addr, *file);
         }
 

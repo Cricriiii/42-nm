@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 18:39:57 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 23:40:59 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,8 @@
 
 #include <elf.h>
 #include <stddef.h>
+
+#include "file_manip.h"
 
 /* Cast an address to the matching 32-bit or 64-bit ELF structure */
 #define ehdr32(addr) ((Elf32_Ehdr*)(addr))
@@ -159,10 +161,14 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
  * @brief format.c - ELF integrity checks
  *
  */
+#define ELF_NOT_RECOGNIZED "file format not recognized"
+#define ELF_NO_SYMBOLS "no symbols"
+
+ 
 #define is_elf_mag(addr) \
     memcmp((addr),       \
            "\x7f"        \
            "ELF",        \
            4)
 
-int elf_format_compliance(void* addr);
+int elf_format_compliance(mappedmem_t* mapped);

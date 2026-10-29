@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 18:36:24 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 23:41:04 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,7 +59,7 @@ void print_symbols(elf_sym_print_t** symbols) {
     elf_sym_print_t** ptr = symbols;
 
     if (!symbols) {
-        print_err("no symbols");
+        print_err(ELF_NO_SYMBOLS);
         return;
     }
 
