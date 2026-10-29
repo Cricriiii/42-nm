@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   nm_helper.c                                        :+:      :+:    :+:   */
+/*   type_deduction.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 15:01:18 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/21 13:24:06 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 15:38:03 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,27 +15,7 @@
 
 #include "nm_elf.h"
 
-/**
- * @brief Interpret the 16-byte identification field (e_ident) of the ELF
- * header.
- *
- * @param addr Address of the first byte of the mapped memory.
- * @return elf_ei_t. Structure holding the identification fields.
- */
-elf_ei_t read_elf_ident(void* addr) {
-    char* ident = (char*)addr;
-    return (elf_ei_t){
-        .mag0 = ident[0],
-        .mag1 = ident[1],
-        .mag2 = ident[2],
-        .mag3 = ident[3],
-        .class = ident[4],
-        .data = ident[5],
-        .version = ident[6],
-        .osabi = ident[7],
-        .abiversion = ident[8],
-    };
-}
+extern int arch_global;
 
 /**
  * @brief Check if a symbol is undefined.
@@ -149,71 +129,112 @@ int is_debug_section(uint64_t section_flag, const char* name) {
            strcmp(name, ".gdb_index") == 0;
 }
 
-/**
- * @brief Locate the symbol tables (.symtab and .dynsym) and their string tables
- * among the section headers of a 32-bit file.
- *
- * @param shdr Section header table.
- * @param shnum Number of section headers.
- * @param sections Holds the section name string table, which is skipped.
- * @param symbols Filled with .symtab and its string table.
- * @param dynamic Filled with .dynsym and its string table.
- */
-void get_symbol_sections_32(Elf32_Shdr* shdr, Elf32_Half shnum,
-                            elf_link_str_32_t* sections,
-                            elf_link_str_32_t* symbols,
-                            elf_link_str_32_t* dynamic) {
-    for (Elf32_Half i = 0; i < shnum; ++i) {
-        Elf32_Shdr* s = &shdr[i];
+void get_symbol_sections(void* addr, elf_link_str_t* sections,
+                         elf_link_str_t* symbols, elf_link_str_t* dynamic) {
+    ElfN_Ehdr ehdr = {};
+    Ehdr_to_generic(addr, &ehdr);
 
-        if (s == sections->strings || s->sh_link == shnum) {
-            continue;
+    // size_t shdr_size = ehdr.e_ident[EI_CLASS] == ELFCLASS64
+    //                        ? sizeof(Elf64_Shdr)
+    //                        : sizeof(Elf32_Shdr);
 
-        } else if (s->sh_type == SHT_SYMTAB) {
+    size_t shdr_size =
+        arch_global == ARCH64 ? sizeof(Elf64_Shdr) : sizeof(Elf32_Shdr);
+
+    for (ElfN_Half i = 0; i < ehdr.e_shnum; ++i) {
+        ElfN_Shdr s = {};
+        Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * i, &s);
+
+        if (i == ehdr.e_shstrndx) {
+            /* get e_shstrndx from ehdr */
+            if (sections) {
+                (*sections).elems = (ElfN_Shdr){};
+                (*sections).strings = s;
+                (*sections).is = 1;
+            }
+
+        } else if (s.sh_type == SHT_SYMTAB) {
             /* in .symtab, read .strtab index */
-            (*symbols).elems = s;
-            (*symbols).strings = &shdr[s->sh_link];
+            if (symbols) {
+                (*symbols).elems = s;
+                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.sh_link,
+                                &(*symbols).strings);
+                (*symbols).is = 1;
+            }
 
-        } else if (s->sh_type == SHT_DYNSYM) {
+        } else if (s.sh_type == SHT_DYNSYM) {
             /* in .dynsym, read .dynstr index */
-            (*dynamic).elems = s;
-            (*dynamic).strings = &shdr[s->sh_link];
+            if (dynamic) {
+                (*dynamic).elems = s;
+                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.sh_link,
+                                &(*dynamic).strings);
+                (*dynamic).is = 1;
+            }
         }
     }
 }
 
 /**
- * @brief Same as get_symbol_sections_32, for a 64-bit file.
+ * @brief Deduce the letter displayed by nm for a symbol. The letter is
+ * uppercase for global symbols and lowercase for local ones.
  *
- * @param shdr Section header table.
- * @param shnum Number of section headers.
- * @param sections Holds the section name string table, which is skipped.
- * @param symbols Filled with .symtab and its string table.
- * @param dynamic Filled with .dynsym and its string table.
+ * @param addr
+ * @param symbol_tab
+ * @param shnum
+ * @param s
+ * @return int
  */
-void get_symbol_sections_64(Elf64_Shdr* shdr, Elf64_Half shnum,
-                            elf_link_str_64_t* sections,
-                            elf_link_str_64_t* symbols,
-                            elf_link_str_64_t* dynamic) {
-    for (Elf64_Half i = 0; i < shnum; ++i) {
-        Elf64_Shdr* s = &shdr[i];
+int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
+                    ElfN_Half shnum, const ElfN_Sym* s) {
+    /* type and binding */
+    unsigned char binding, type;
+    if (arch_global == ARCH64) {
+        binding = ELF64_ST_BIND(s->st_info);
+        type = ELF64_ST_TYPE(s->st_info);
+    } else {
+        binding = ELF32_ST_BIND(s->st_info);
+        type = ELF32_ST_TYPE(s->st_info);
+    }
 
-        if (s == sections->strings || s->sh_link == shnum) {
-            continue;
+    if (s->st_shndx == SHN_COMMON) {
+        return 'C';
+    }
+    if (s->st_shndx == SHN_UNDEF) {
+        if (binding == STB_WEAK) {
+            return type == STT_OBJECT ? 'v' : 'w';
+        }
+        return 'U';
+    }
+    if (type == STT_GNU_IFUNC) {
+        return 'i';
+    }
+    if (binding == STB_WEAK) {
+        return type == STT_OBJECT ? 'V' : 'W';
+    }
+    if (binding == STB_GNU_UNIQUE) {
+        return 'u';
+    }
+    if (binding != STB_LOCAL && binding != STB_GLOBAL) {
+        return '?';
+    }
 
-        } else if (s->sh_type == SHT_SYMTAB) {
-            /* in .symtab, read .strtab index */
-            if (symbols) {
-                (*symbols).elems = s;
-                (*symbols).strings = &shdr[s->sh_link];
-            }
+    int c;
 
-        } else if (s->sh_type == SHT_DYNSYM) {
-            /* in .dynsym, read .dynstr index */
-            if (dynamic) {
-                (*dynamic).elems = s;
-                (*dynamic).strings = &shdr[s->sh_link];
-            }
+    /* bfd treats any index it can't resolve as an absolute symbol */
+    if (s->st_shndx == SHN_ABS || s->st_shndx >= shnum) {
+        c = 'a';
+    } else {
+        const char* name = addr + symbol_tab->strings.sh_offset + s->st_name;
+
+        c = section_type_from_name(name);
+        if (c == '?') {
+            c = section_type_from_flags(symbol_tab->elems.sh_flags,
+                                        symbol_tab->elems.sh_type, name);
         }
     }
+
+    if (binding == STB_GLOBAL && c >= 'a' && c <= 'z') {
+        c -= 'a' - 'A';
+    }
+    return c;
 }

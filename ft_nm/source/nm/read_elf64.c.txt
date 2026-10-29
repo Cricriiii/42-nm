@@ -1,14 +1,14 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   read_elf64.c                                       :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/21 13:38:58 by cgajean          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    read_elf64.c.txt                                   :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#              #
+#    Updated: 2026/10/29 14:08:26 by cgajean          ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
 #include <stdio.h>
 #include <string.h>
@@ -86,10 +86,10 @@ static int get_symbol_type(const Elf64_Shdr* shdr, Elf64_Half shnum,
  * element is the null symbol, and the array is null terminated.
  *
  * @param addr Address of the mapped memory region.
- * @return nm_sym_out_t**. Array of symbols, nullptr if there is no .symtab.
+ * @return elf_sym_print**. Array of symbols, nullptr if there is no .symtab.
  */
-nm_sym_out_t** read_elf64(void* addr) {
-    nm_sym_out_t** ret_array = nullptr;
+elf_sym_print** read_elf64(void* addr) {
+    elf_sym_print** ret_array = nullptr;
 
     Elf64_Shdr* shdr_start = shdr64(addr + ehdr64(addr)->e_shoff);
 
@@ -104,7 +104,7 @@ nm_sym_out_t** read_elf64(void* addr) {
     if (symbols.elems) {
         size_t n_sym = symbols.elems->sh_size / symbols.elems->sh_entsize;
 
-        ret_array = xcalloc(n_sym + 1, sizeof(nm_sym_out_t*));
+        ret_array = xcalloc(n_sym + 1, sizeof(elf_sym_print*));
         store_ptr_resource(ret_array);
 
         Elf64_Sym* symbol_tab = sym64(addr + symbols.elems->sh_offset);
@@ -117,7 +117,7 @@ nm_sym_out_t** read_elf64(void* addr) {
             Elf64_Sym* s = &symbol_tab[i];
             bool is_section = ELF64_ST_TYPE(s->st_info) == STT_SECTION;
 
-            nm_sym_out_t* nm_sym = xcalloc(1, sizeof(nm_sym_out_t));
+            elf_sym_print* nm_sym = xcalloc(1, sizeof(elf_sym_print));
             store_ptr_resource(nm_sym);
             nm_sym->name = is_section ? addr + sections.strings->sh_offset +
                                             shdr_start[s->st_shndx].sh_name

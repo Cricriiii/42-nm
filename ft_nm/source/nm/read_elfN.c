@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/28 18:59:22 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 15:35:00 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,65 +19,30 @@
 
 typedef struct nm_args nm_args_t;
 
+int arch_global;
+
 extern nm_args_t options;
 
 /**
- * @brief Deduce the letter displayed by nm for a symbol. The letter is
- * uppercase for global symbols and lowercase for local ones.
+ * @brief Interpret the 16-byte identification field (e_ident) of the ELF
+ * header.
  *
- * @param shdr Section header table.
- * @param shnum Number of section headers.
- * @param shstrtab Section name string table.
- * @param s Symbol to be typed.
- * @return int. Letter as displayed by nm.
+ * @param addr Address of the first byte of the mapped memory.
+ * @return elf_ei_t. Structure holding the identification fields.
  */
-static int get_symbol_type(const Elf64_Shdr* shdr, Elf64_Half shnum,
-                           const char* shstrtab, const Elf64_Sym* s) {
-    unsigned char binding = ELF64_ST_BIND(s->st_info);
-    unsigned char type = ELF64_ST_TYPE(s->st_info);
-
-    if (s->st_shndx == SHN_COMMON) {
-        return 'C';
-    }
-    if (s->st_shndx == SHN_UNDEF) {
-        if (binding == STB_WEAK) {
-            return type == STT_OBJECT ? 'v' : 'w';
-        }
-        return 'U';
-    }
-    if (type == STT_GNU_IFUNC) {
-        return 'i';
-    }
-    if (binding == STB_WEAK) {
-        return type == STT_OBJECT ? 'V' : 'W';
-    }
-    if (binding == STB_GNU_UNIQUE) {
-        return 'u';
-    }
-    if (binding != STB_LOCAL && binding != STB_GLOBAL) {
-        return '?';
-    }
-
-    int c;
-
-    /* bfd treats any index it can't resolve as an absolute symbol */
-    if (s->st_shndx == SHN_ABS || s->st_shndx >= shnum) {
-        c = 'a';
-    } else {
-        const Elf64_Shdr* section = &shdr[s->st_shndx];
-        const char* name = shstrtab + section->sh_name;
-
-        c = section_type_from_name(name);
-        if (c == '?') {
-            c = section_type_from_flags(section->sh_flags, section->sh_type,
-                                        name);
-        }
-    }
-
-    if (binding == STB_GLOBAL && c >= 'a' && c <= 'z') {
-        c -= 'a' - 'A';
-    }
-    return c;
+elf_ei_t read_elf_ident(void* addr) {
+    char* ident = (char*)addr;
+    return (elf_ei_t){
+        .mag0 = ident[0],
+        .mag1 = ident[1],
+        .mag2 = ident[2],
+        .mag3 = ident[3],
+        .class = ident[4],
+        .data = ident[5],
+        .version = ident[6],
+        .osabi = ident[7],
+        .abiversion = ident[8],
+    };
 }
 
 /**
@@ -86,59 +51,68 @@ static int get_symbol_type(const Elf64_Shdr* shdr, Elf64_Half shnum,
  * element is the null symbol, and the array is null terminated.
  *
  * @param addr Address of the mapped memory region.
- * @return nm_sym_out_t**. Array of symbols, nullptr if there is no .symtab.
+ * @return elf_sym_print**. Array of symbols, nullptr if there is no .symtab.
  */
-nm_sym_out_t** read_elfN(void* addr) {
-    nm_sym_out_t** ret_array = nullptr;
-
-    // Elf64_Shdr* shdr_start = shdr64(addr + ehdr64(addr)->e_shoff);
+elf_sym_print** read_elfN(void* addr) {
+    elf_sym_print** ret_array = nullptr;
 
     ElfN_Ehdr ehdr = {};
     if (Ehdr_to_generic(addr, &ehdr) == -1) {
         ;  // treat error
     }
+    arch_global = ehdr.e_ident[EI_CLASS] == ELFCLASS64 ? ARCH64 : ARCH32;
 
-    ElfN_Shdr shdr_start = {};
-    if (Shdr_to_generic(addr, &shdr_start) == -1) {
-        ;  // treat error
-    }
-
-    elf_link_str_t sections = {
-        .strings = &shdr_start[ehdr64(addr)->e_shstrndx]};  // encore a faire
+    elf_link_str_t sections = {};  // encore a faire
     elf_link_str_t symbols = {};
     elf_link_str_t dynamic = {};
-    get_symbol_sections_64(&shdr_start, ehdr.e_shnum, &sections, &symbols,
-                           &dynamic);
+    get_symbol_sections(addr, &sections, &symbols, &dynamic);
 
-    if (symbols.elems) {
-        size_t n_sym = symbols.elems->sh_size / symbols.elems->sh_entsize;
+    if (symbols.is) {
+        size_t n_sym = symbols.elems.sh_size / symbols.elems.sh_entsize;
 
-        ret_array = xcalloc(n_sym + 1, sizeof(nm_sym_out_t*));
+        ret_array = xcalloc(n_sym + 1, sizeof(elf_sym_print*));
         store_ptr_resource(ret_array);
-
-        ElfN_Sym* symbol_tab = sym64(addr + symbols.elems->sh_offset);
-        char* string_tab = addr + symbols.strings->sh_offset;
 
         size_t cur_sym_idx = 0;
 
+        size_t sym_size =
+            arch_global == ARCH64 ? sizeof(Elf64_Sym) : sizeof(Elf32_Sym);
+
         /* Convert each raw symbol into its displayable form */
         for (size_t i = 0; i < n_sym; ++i) {
-            ElfN_Sym* s = &symbol_tab[i];
-            bool is_section = ELF64_ST_TYPE(s->st_info) == STT_SECTION;
+            /* obtain symbol data */
+            ElfN_Sym s = {};
+            Sym_to_generic(addr, symbols.elems.sh_offset + sym_size * i, &s);
 
-            nm_sym_out_t* nm_sym = xcalloc(1, sizeof(nm_sym_out_t));
+            /* create output symbol data */
+            elf_sym_print* nm_sym = xcalloc(1, sizeof(elf_sym_print));
             store_ptr_resource(nm_sym);
-            nm_sym->name = is_section ? addr + sections.strings->sh_offset +
-                                            shdr_start[s->st_shndx].sh_name
-                                      : string_tab + s->st_name;
-            nm_sym->value = s->st_value;
-            nm_sym->type = get_symbol_type(
-                shdr_start, shnum, addr + sections.strings->sh_offset, s);
-            nm_sym->external = is_external(s->st_shndx, s->st_info);
-            nm_sym->undef = is_undef(s->st_shndx);
-            nm_sym->arch = ARCH64;
-            nm_sym->section = is_section;
 
+            /* symbol architecture */
+            nm_sym->arch = arch_global;
+
+            /* symbol section */
+            nm_sym->section =
+                arch_global ==
+                ((ARCH64 ? ELF64_ST_TYPE(s.st_info)
+                         : ELF32_ST_TYPE(s.st_info)) == STT_SECTION);
+
+            /* symbol name */
+            nm_sym->name = addr + symbols.strings.sh_offset + s.st_name;
+
+            /* symbol value */
+            nm_sym->value = s.st_value;
+
+            /* symbol type */
+            nm_sym->type = get_symbol_type(addr, &symbols, ehdr.e_shnum, &s);
+
+            /* symbol external */
+            nm_sym->external = is_external(s.st_shndx, s.st_info);
+
+            /* symbol undef*/
+            nm_sym->undef = is_undef(s.st_shndx);
+
+            /* store symbol pointer in array */
             ret_array[cur_sym_idx++] = nm_sym;
         }
     }

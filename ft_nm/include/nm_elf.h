@@ -6,13 +6,14 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/28 18:57:54 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 15:36:07 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
 #include <elf.h>
+#include <stddef.h>
 
 /* Cast an address to the matching 32-bit or 64-bit ELF structure */
 #define ehdr32(addr) ((Elf32_Ehdr*)(addr))
@@ -58,34 +59,16 @@ typedef struct elf_ei {
 
 elf_ei_t read_elf_ident(void* addr);
 
-/* A table section header and the header of its linked string table */
-typedef struct elf_link_str_32 {
-    Elf32_Shdr* elems;
-    Elf32_Shdr* strings;
-} elf_link_str_32_t;
-
-typedef struct elf_link_str_64 {
-    Elf64_Shdr* elems;
-    Elf64_Shdr* strings;
-} elf_link_str_64_t;
-
-typedef struct elf_link_str {
-    ElfN_Shdr* elems;
-    ElfN_Shdr* strings;
-} elf_link_str_t;
-
 /* Arch-independant structure */
 typedef Elf64_Half ElfN_Half;
-typedef Elf64_Word ElfN_Word;
 typedef Elf64_Word ElfN_Word;
 typedef Elf64_Xword ElfN_Xword;
 typedef Elf64_Addr ElfN_Addr;
 typedef Elf64_Off ElfN_Off;
-typedef Elf64_Xword ElfN_Xword;
-typedef Elf64_Word ElfN_Word;
-typedef Elf64_Word ElfN_Word;
-typedef Elf64_Xword ElfN_Xword;
-typedef Elf64_Xword ElfN_Xword;
+typedef Elf64_Sword ElfN_Sword;
+typedef Elf64_Sxword ElfN_Sxword;
+typedef Elf64_Section ElfN_Section;
+typedef Elf64_Versym ElfN_Versym;
 
 typedef struct {
     unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
@@ -117,6 +100,15 @@ typedef struct {
     ElfN_Xword sh_entsize;   /* Entry size if section holds table */
 } ElfN_Shdr;
 
+typedef struct {
+    ElfN_Word st_name;      /* Symbol name (string tbl index) */
+    unsigned char st_info;  /* Symbol type and binding */
+    unsigned char st_other; /* Symbol visibility */
+    ElfN_Section st_shndx;  /* Section index */
+    ElfN_Addr st_value;     /* Symbol value */
+    ElfN_Xword st_size;     /* Symbol size */
+} ElfN_Sym;
+
 /* Symbol as displayed by nm */
 typedef struct nm_sym_out {
     long value;   /* Symbol value */
@@ -126,11 +118,37 @@ typedef struct nm_sym_out {
     int external; /* Set for external symbols */
     int undef;    /* Set for undefined symbols */
     int section;  /* Set for STT_SECTION symbols */
-} nm_sym_out_t;
+} elf_sym_print;
 
-nm_sym_out_t** read_elf32(void* addr);
-nm_sym_out_t** read_elf64(void* addr);
-nm_sym_out_t** read_elfN(void* addr);
+/* A table section header and the header of its linked string table */
+typedef struct elf_link_str_32 {
+    Elf32_Shdr* elems;
+    Elf32_Shdr* strings;
+} elf_link_str_32_t;
+
+typedef struct elf_link_str_64 {
+    Elf64_Shdr* elems;
+    Elf64_Shdr* strings;
+} elf_link_str_64_t;
+
+typedef struct elf_link_str {
+    ElfN_Shdr elems;
+    ElfN_Shdr strings;
+    int is;
+} elf_link_str_t;
+
+void get_symbol_sections(void* addr, elf_link_str_t* sections,
+                         elf_link_str_t* symbols, elf_link_str_t* dynamic);
+
+#define is_elf_mag(addr) \
+    memcmp((addr),       \
+           "\x7f"        \
+           "ELF",        \
+           4)
+
+elf_sym_print** read_elf32(void* addr);
+elf_sym_print** read_elf64(void* addr);
+elf_sym_print** read_elfN(void* addr);
 
 int is_debug_section(uint64_t section_flag, const char* name);
 int section_type_from_name(const char* name);
@@ -139,17 +157,9 @@ int is_external(uint64_t st_shndx, unsigned char st_info);
 
 int section_type_from_flags(uint64_t section_flag, uint64_t section_type,
                             const char* name);
+int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
+                    ElfN_Half shnum, const ElfN_Sym* s);
 
-__attribute((nonnull(1, 3))) void get_symbol_sections_32(
-    Elf32_Shdr* shdr, Elf32_Half shnum, elf_link_str_32_t* sections,
-    elf_link_str_32_t* symbols, elf_link_str_32_t* dynamic);
-
-__attribute((nonnull(1, 3))) void get_symbol_sections_64(
-    Elf64_Shdr* shdr, Elf64_Half shnum, elf_link_str_64_t* sections,
-    elf_link_str_64_t* symbols, elf_link_str_64_t* dynamic);
-
-
-#define is_elf_mag(addr) memcmp((addr), "\x7f" "ELF", 4)
-    
 int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic);
-int Shdr_to_generic(void* addr, ElfN_Shdr* generic);
+int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic);
+int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic);

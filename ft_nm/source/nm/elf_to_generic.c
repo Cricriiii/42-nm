@@ -6,13 +6,19 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/28 17:51:25 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/28 18:48:28 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 15:31:02 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "nm_elf.h"
 #include "print.h"
 
+/**
+ * @brief 
+ * 
+ * @param addr 
+ * @return ElfN_Ehdr 
+ */
 static ElfN_Ehdr Ehdr32to64(void* addr) {
     Elf32_Ehdr* raw = ehdr32(addr);
     ElfN_Ehdr converted = {};
@@ -34,6 +40,13 @@ static ElfN_Ehdr Ehdr32to64(void* addr) {
     return converted;
 }
 
+/**
+ * @brief 
+ * 
+ * @param addr 
+ * @param generic 
+ * @return int 
+ */
 int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];
     switch (ei_class) {
@@ -51,6 +64,12 @@ int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic) {
     }
 }
 
+/**
+ * @brief 
+ * 
+ * @param addr 
+ * @return ElfN_Shdr 
+ */
 static ElfN_Shdr Shdr32to64(void* addr) {
     Elf32_Shdr* raw = shdr32(addr);
     ElfN_Shdr converted = {};
@@ -69,15 +88,23 @@ static ElfN_Shdr Shdr32to64(void* addr) {
     return converted;
 }
 
-int Shdr_to_generic(void* addr, ElfN_Shdr* generic) {
+/**
+ * @brief 
+ * 
+ * @param addr 
+ * @param offset 
+ * @param generic 
+ * @return int 
+ */
+int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];
     switch (ei_class) {
         case ELFCLASS32:
-            *generic = Shdr32to64(addr);
+            *generic = Shdr32to64(addr + offset);
             return 0;
 
         case ELFCLASS64:
-            *generic = *(ElfN_Shdr*)addr;
+            *generic = *(ElfN_Shdr*)(addr + offset);
             return 0;
 
         default:
@@ -86,3 +113,47 @@ int Shdr_to_generic(void* addr, ElfN_Shdr* generic) {
     }
 }
 
+/**
+ * @brief 
+ * 
+ * @param addr 
+ * @return ElfN_Sym 
+ */
+static ElfN_Sym Sym32to64(void* addr) {
+    Elf32_Sym* raw = sym32(addr);
+    ElfN_Sym converted = {};
+
+    converted.st_name = raw->st_name;
+    converted.st_info = raw->st_info;
+    converted.st_other = raw->st_other;
+    converted.st_shndx = raw->st_shndx;
+    converted.st_value = raw->st_value;
+    converted.st_size = raw->st_size;
+
+    return converted;
+}
+
+/**
+ * @brief 
+ * 
+ * @param addr 
+ * @param offset 
+ * @param generic 
+ * @return int 
+ */
+int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic) {
+    int ei_class = ((char*)addr)[EI_CLASS];
+    switch (ei_class) {
+        case ELFCLASS32:
+            *generic = Sym32to64(addr + offset);
+            return 0;
+
+        case ELFCLASS64:
+            *generic = *(ElfN_Sym*)(addr + offset);
+            return 0;
+
+        default:
+            print_err("file format not recognized");
+            return 1;
+    }
+}

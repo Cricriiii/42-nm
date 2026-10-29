@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/28 18:56:02 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 14:08:26 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,9 +47,8 @@ static int display_file(void* addr, char* file) {
 
     /* Verify file format */
 
-    
     /* Read arch-independant ELF file */
-    nm_sym_out_t** symbols = read_elfN(addr);
+    elf_sym_print** symbols = read_elfN(addr);
 
     /* Output values on stdout */
     if (print_filename)
@@ -61,7 +60,6 @@ static int display_file(void* addr, char* file) {
 
     return 0;
 }
-
 
 /**
  * @brief Program's core loop. Sequentially open, map and display each requested

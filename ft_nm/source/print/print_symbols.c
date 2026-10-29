@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/22 16:52:16 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 14:08:26 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,15 +30,15 @@ extern nm_args_t options;
  * descending order, ignoring underscores. The comparison is done by strcoll
  * using the host system locales.
  *
- * @param a First pointer to nm_sym_out_t* to be compared.
- * @param b Second pointer to nm_sym_out_t* to be compared.
+ * @param a First pointer to elf_sym_print* to be compared.
+ * @param b Second pointer to elf_sym_print* to be compared.
  * @return int. Difference between the first two differing characters, negated
  * if the reverse sort is requested.
  */
 
 static int compare_on_name(const void* a, const void* b) {
-    const char* s1 = (*(const nm_sym_out_t**)a)->name;
-    const char* s2 = (*(const nm_sym_out_t**)b)->name;
+    const char* s1 = (*(const elf_sym_print**)a)->name;
+    const char* s2 = (*(const elf_sym_print**)b)->name;
 
     /* Skip leading '_' */
     while (*s1 && *s1 == '_') {
@@ -56,7 +56,7 @@ static int compare_on_name(const void* a, const void* b) {
         return options.rsort ? -result : result;
     }
 
-    result = strcmp((*(nm_sym_out_t**)a)->name, (*(nm_sym_out_t**)b)->name);
+    result = strcmp((*(elf_sym_print**)a)->name, (*(elf_sym_print**)b)->name);
     return options.rsort ? -result : result;
 }
 
@@ -67,8 +67,8 @@ static int compare_on_name(const void* a, const void* b) {
  *
  * @param symbols Null terminated array of pointers to symbols, or nullptr.
  */
-void print_symbols(nm_sym_out_t** symbols) {
-    nm_sym_out_t** ptr = symbols;
+void print_symbols(elf_sym_print** symbols) {
+    elf_sym_print** ptr = symbols;
 
     if (!symbols) {
         print_err("no symbols");
@@ -82,11 +82,11 @@ void print_symbols(nm_sym_out_t** symbols) {
 
     /* Sort everything but the null symbol */
     if (!options.no_sort) {
-        qsort(symbols + 1, ptr - symbols - 1, sizeof(nm_sym_out_t*),
+        qsort(symbols + 1, ptr - symbols - 1, sizeof(elf_sym_print*),
               compare_on_name);
     }
 
-    for (nm_sym_out_t** s = symbols + 1; *s; ++s) {
+    for (elf_sym_print** s = symbols + 1; *s; ++s) {
         /* Skip the symbols filtered out by the options */
         if ((!options.debug_syms &&
              ((*s)->section || (*s)->type == 'a' || (*s)->type == 'N')) ||
