@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 16:37:53 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 18:39:57 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,7 +59,10 @@ typedef struct elf_ei {
 
 elf_ei_t read_elf_ident(void* addr);
 
-/* Arch-independant structure */
+/**
+ * @brief Architecture-independant types
+ *
+ */
 typedef Elf64_Half ElfN_Half;
 typedef Elf64_Word ElfN_Word;
 typedef Elf64_Xword ElfN_Xword;
@@ -110,7 +113,7 @@ typedef struct {
 } ElfN_Sym;
 
 /* Symbol as displayed by nm */
-typedef struct nm_sym_out {
+typedef struct elf_sym_print {
     long value;   /* Symbol value */
     char* name;   /* Symbol name, points into the string table */
     int arch;     /* ARCH32 or ARCH64 */
@@ -118,35 +121,32 @@ typedef struct nm_sym_out {
     int external; /* Set for external symbols */
     int undef;    /* Set for undefined symbols */
     int section;  /* Set for STT_SECTION symbols */
-} elf_sym_print;
+} elf_sym_print_t;
 
 /* A table section header and the header of its linked string table */
-typedef struct elf_link_str_32 {
-    Elf32_Shdr* elems;
-    Elf32_Shdr* strings;
-} elf_link_str_32_t;
-
-typedef struct elf_link_str_64 {
-    Elf64_Shdr* elems;
-    Elf64_Shdr* strings;
-} elf_link_str_64_t;
-
 typedef struct elf_link_str {
     ElfN_Shdr elems;
     ElfN_Shdr strings;
     int is;
 } elf_link_str_t;
 
-#define is_elf_mag(addr) \
-    memcmp((addr),       \
-           "\x7f"        \
-           "ELF",        \
-           4)
+/**
+ * @brief elf_to_generic.c - Contains utilities meant to manipulate
+ * architecture-independant structures
+ */
+int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic);
+int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic);
+int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic);
 
-elf_sym_print** read_elf32(void* addr);
-elf_sym_print** read_elf64(void* addr);
-elf_sym_print** read_elfN(void* addr);
+/**
+ * @brief read_elfN.c - Read ELF files. Architecture-independant.
+ */
+elf_sym_print_t** read_elfN(void* addr);
 
+/**
+ * @brief type_deduction.c - Contains the type deduction utilities
+ *
+ */
 int is_debug_section(ElfN_Xword section_flag, const char* name);
 int section_type_from_name(const char* name);
 int is_undef(ElfN_Section st_shndx);
@@ -155,6 +155,14 @@ int is_external(ElfN_Section st_shndx, unsigned char st_info);
 int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
                     ElfN_Half shnum, const ElfN_Sym* s);
 
-int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic);
-int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic);
-int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic);
+/**
+ * @brief format.c - ELF integrity checks
+ *
+ */
+#define is_elf_mag(addr) \
+    memcmp((addr),       \
+           "\x7f"        \
+           "ELF",        \
+           4)
+
+int elf_format_compliance(void* addr);

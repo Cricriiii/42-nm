@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 17:45:25 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 18:36:24 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,10 +101,10 @@ static void get_symbol_sections(void* addr, elf_link_str_t* sections,
  * element is the null symbol, and the array is null terminated.
  *
  * @param addr Address of the mapped memory region.
- * @return elf_sym_print**. Array of symbols, nullptr if there is no .symtab.
+ * @return elf_sym_print_t**. Array of symbols, nullptr if there is no .symtab.
  */
-elf_sym_print** read_elfN(void* addr) {
-    elf_sym_print** ret_array = nullptr;
+elf_sym_print_t** read_elfN(void* addr) {
+    elf_sym_print_t** ret_array = nullptr;
 
     ElfN_Ehdr ehdr = {};
     if (Ehdr_to_generic(addr, &ehdr) == -1) {
@@ -120,7 +120,7 @@ elf_sym_print** read_elfN(void* addr) {
     if (symbols.is) {
         size_t n_sym = symbols.elems.sh_size / symbols.elems.sh_entsize;
 
-        ret_array = xcalloc(n_sym + 1, sizeof(elf_sym_print*));
+        ret_array = xcalloc(n_sym + 1, sizeof(elf_sym_print_t*));
         store_ptr_resource(ret_array);
 
         size_t cur_sym_idx = 0;
@@ -134,7 +134,7 @@ elf_sym_print** read_elfN(void* addr) {
             shdr_size = sizeof(Elf32_Shdr);
             sym_size = sizeof(Elf32_Sym);
         }
-        
+
         /* Convert each raw symbol into its displayable form */
         for (size_t i = 0; i < n_sym; ++i) {
             /* obtain symbol data */
@@ -142,7 +142,7 @@ elf_sym_print** read_elfN(void* addr) {
             Sym_to_generic(addr, symbols.elems.sh_offset + sym_size * i, &s);
 
             /* create output symbol data */
-            elf_sym_print* nm_sym = xcalloc(1, sizeof(elf_sym_print));
+            elf_sym_print_t* nm_sym = xcalloc(1, sizeof(elf_sym_print_t));
             store_ptr_resource(nm_sym);
 
             /* symbol architecture */
@@ -155,10 +155,13 @@ elf_sym_print** read_elfN(void* addr) {
 
             if (nm_sym->section) {
                 ElfN_Shdr sym_section = {};
-                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.st_shndx, &sym_section);
-                nm_sym->name = addr + sections.strings.sh_offset + sym_section.sh_name;
+                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.st_shndx,
+                                &sym_section);
+                nm_sym->name =
+                    addr + sections.strings.sh_offset + sym_section.sh_name;
             } else {
-                nm_sym->name = addr + symbols.strings.sh_offset + s.st_name;;
+                nm_sym->name = addr + symbols.strings.sh_offset + s.st_name;
+                ;
             }
 
             /* symbol value */

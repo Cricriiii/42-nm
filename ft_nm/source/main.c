@@ -6,15 +6,15 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 17:39:47 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/29 18:42:49 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <errno.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
 
 #include "file_manip.h"
 #include "nm_elf.h"
@@ -41,15 +41,10 @@ bool print_filename = false;
  * @return int. 0 on success, 1 if the file format is not recognized.
  */
 static int display_file(void* addr, char* file) {
-    /* Test the start of the file against 0x7f ELF*/
-    if (is_elf_mag(addr)) {
-        return print_err("file format not recognized"), 1;
-    }
-
     /* Verify file format */
 
     /* Read arch-independant ELF file */
-    elf_sym_print** symbols = read_elfN(addr);
+    elf_sym_print_t** symbols = read_elfN(addr);
 
     /* Output values on stdout */
     if (print_filename)
@@ -102,7 +97,9 @@ static int mainloop(char** files) {
         del_fd_resource(file_fd);
 
         /* Display ELF symbols */
-        retval = display_file(mapped.addr, *file);
+        if (elf_format_compliance(mapped.addr) != -1) {
+            retval = display_file(mapped.addr, *file);
+        }
 
         /* Release the mapped memory */
         munmap(mapped.addr, mapped.size);
