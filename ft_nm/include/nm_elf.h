@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 23:40:59 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/30 13:24:37 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,6 +45,7 @@
 /* Word size in bits, used to size the displayed symbol values */
 #define ARCH32 32
 #define ARCH64 64
+#define ARCHERR -1
 
 /* Fields of the e_ident array of the ELF header */
 typedef struct elf_ei {
@@ -163,12 +164,6 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
  */
 #define ELF_NOT_RECOGNIZED "file format not recognized"
 #define ELF_NO_SYMBOLS "no symbols"
-
- 
-#define is_elf_mag(addr) \
-    memcmp((addr),       \
-           "\x7f"        \
-           "ELF",        \
-           4)
+#define ELF_NOT_IMPLEMENTED "program can't only read LSB files"
 
 int elf_format_compliance(mappedmem_t* mapped);

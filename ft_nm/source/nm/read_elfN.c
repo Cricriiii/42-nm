@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 18:36:24 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/30 12:01:07 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 
 typedef struct nm_args nm_args_t;
 
-int arch_global;
+extern int arch_global;
 
 extern nm_args_t options;
 
@@ -110,7 +110,6 @@ elf_sym_print_t** read_elfN(void* addr) {
     if (Ehdr_to_generic(addr, &ehdr) == -1) {
         ;  // treat error
     }
-    arch_global = ehdr.e_ident[EI_CLASS] == ELFCLASS64 ? ARCH64 : ARCH32;
 
     elf_link_str_t sections = {};  // encore a faire
     elf_link_str_t symbols = {};

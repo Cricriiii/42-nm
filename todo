@@ -1,0 +1,2 @@
+__attribute((cleanup(function)))
+archives .a
