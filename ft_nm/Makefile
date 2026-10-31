@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/29 18:46:53 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/01 00:22:23 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,7 +19,7 @@ CC			:= cc
 CC32		:= $(CC) -m32
 
 C_STD		:= -std=c23
-C_OPT		:= -O3
+C_OPT		:= #-O3
 C_ERR		:= -Wall -Wextra -Werror
 C_DBG		:= -g3
 C_DEP		:= -MD -MMD

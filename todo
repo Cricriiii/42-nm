@@ -1,3 +1,7 @@
 __attribute((cleanup(function)))
 archives .a
 /usr/lib64/java-25-openjdk/libnssadapter.so
+
+
+
+https://elftoolchain.sourceforge.io/man/ar.5.html

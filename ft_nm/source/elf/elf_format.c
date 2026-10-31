@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   format.c                                           :+:      :+:    :+:   */
+/*   elf_format.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/29 18:26:54 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/30 13:35:13 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/31 23:16:18 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,7 @@ static int _test_file_size(mappedmem_t* mapped) {
  * @param addr
  * @return int
  */
-int elf_format_compliance(mappedmem_t* mapped) {
+int is_elf_format(mappedmem_t* mapped) {
     if (_test_elf_ident(mapped->addr) == -1) {
         return -1;
     }

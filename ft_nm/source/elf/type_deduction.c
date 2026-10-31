@@ -6,12 +6,14 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 15:01:18 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/30 18:07:43 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/10/31 23:54:24 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <stddef.h>
 #include <string.h>
+#include <ctype.h>
+
 
 #include "nm_elf.h"
 
@@ -62,40 +64,6 @@ int is_debug_section(ElfN_Xword section_flag, const char* name) {
            strncmp(name, ".line", 5) == 0 || strncmp(name, ".stab", 5) == 0 ||
            strcmp(name, ".gdb_index") == 0;
 }
-
-/**
- * @brief Deduce the symbol letter from the name of its section, as bfd's
- * coff_section_type() does. A name matches an entry of the table if it is equal
- * to it or continues with '.', '$' or a digit.
- *
- * @param name Name of the section.
- * @return int. Lowercase letter as displayed by nm, '?' if the name is unknown.
- */
-// int section_type_from_name(const char* name) {
-//     static const struct {
-//         const char* prefix;
-//         int type;
-//     } table[] = {
-//         {".bss", 'b'},     {".code", 't'},  {".data", 'd'},
-//         {"*DEBUG*", 'N'},  {".debug", 'N'}, {".drectve", 'i'},
-//         {".edata", 'e'},   {".fini", 't'},  {".idata", 'i'},
-//         {".init", 't'},    {".pdata", 'p'}, {".rdata", 'r'},
-//         {".rodata", 'r'},  {".sbss", 's'},  {".scommon", 'c'},
-//         {".sdata", 'g'},   {".text", 't'},  {"vars", 'd'},
-//         {"zerovars", 'b'},
-//     };
-
-//     for (size_t i = 0; i < sizeof(table) / sizeof(*table); ++i) {
-//         size_t len = strlen(table[i].prefix);
-
-//         /* ".text" and ".text.foo" match, ".textfoo" does not */
-//         if (strncmp(name, table[i].prefix, len) == 0 &&
-//             (name[len] == '\0' || strchr(".$0123456789", name[len]))) {
-//             return table[i].type;
-//         }
-//     }
-//     return '?';
-// }
 
 /**
  * @brief Deduce the symbol letter from the flags and type of its section. Used
@@ -192,15 +160,12 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
         const char* name =
             addr + symbol_tab->strings.sh_offset + sym_section.sh_name;
 
-        // c = section_type_from_name(name);
-        // if (c == '?') {
-            c = section_type_from_flags(sym_section.sh_flags,
-                                        sym_section.sh_type, name);
-        // }
+        c = section_type_from_flags(sym_section.sh_flags,
+                                    sym_section.sh_type, name);
     }
 
-    if (binding == STB_GLOBAL && c >= 'a' && c <= 'z') {
-        c -= 'a' - 'A';
+    if (binding == STB_GLOBAL && islower(c)) {
+        c = toupper(c);
     }
     return c;
 }

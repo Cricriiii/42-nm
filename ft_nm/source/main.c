@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/30 18:25:41 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/01 00:53:57 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 
 #include "file_manip.h"
 #include "nm_elf.h"
+#include "nm_ar.h"
 #include "options.h"
 #include "print.h"
 #include "resource_collector.h"
@@ -97,7 +98,9 @@ static int mainloop(char** files) {
         del_fd_resource(file_fd);
 
         /* Display ELF symbols */
-        if (elf_format_compliance(&mapped) != -1) {
+        if (ar_is_signature(mapped.addr)) {
+            retval = ar_is_format(&mapped);
+        } else if (is_elf_format(&mapped) != -1) {
             retval = display_file(mapped.addr, *file);
         }
 

@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:49:55 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/30 13:24:37 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/01 00:53:55 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -162,8 +162,6 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
  * @brief format.c - ELF integrity checks
  *
  */
-#define ELF_NOT_RECOGNIZED "file format not recognized"
-#define ELF_NO_SYMBOLS "no symbols"
-#define ELF_NOT_IMPLEMENTED "program can't only read LSB files"
 
-int elf_format_compliance(mappedmem_t* mapped);
+
+int is_elf_format(mappedmem_t* mapped);
