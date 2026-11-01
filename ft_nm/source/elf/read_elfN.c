@@ -46,12 +46,14 @@ elf_ei_t read_elf_ident(void* addr) {
 }
 
 /**
- * @brief Get the symbol sections object
+ * @brief Locate the section name string table, .symtab and .dynsym of an ELF
+ * file, along with the string table linked to each symbol table. A null
+ * pointer skips the matching output.
  *
- * @param addr
- * @param sections
- * @param symbols
- * @param dynamic
+ * @param addr Address of the start of the ELF file.
+ * @param sections Filled with the section name string table (.shstrtab).
+ * @param symbols Filled with .symtab and its string table (.strtab).
+ * @param dynamic Filled with .dynsym and its string table (.dynstr).
  */
 static void get_symbol_sections(void* addr, elf_link_str_t* sections,
                                 elf_link_str_t* symbols,
@@ -96,11 +98,12 @@ static void get_symbol_sections(void* addr, elf_link_str_t* sections,
 }
 
 /**
- * @brief Read the symbol table of a 64-bit ELF file. The returned array and its
- * elements are allocated and registered in the resource collector. The first
- * element is the null symbol, and the array is null terminated.
+ * @brief Read the symbol table (.symtab) of an ELF file, 32 or 64 bits. The
+ * returned array and its elements are allocated and registered in the resource
+ * collector. The first element is the null symbol, and the array is null
+ * terminated.
  *
- * @param addr Address of the mapped memory region.
+ * @param addr Address of the start of the ELF file.
  * @return elf_sym_print_t**. Array of symbols, nullptr if there is no .symtab.
  */
 elf_sym_print_t** read_elfN(void* addr) {

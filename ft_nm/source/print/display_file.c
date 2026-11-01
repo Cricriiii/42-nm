@@ -18,11 +18,14 @@
 extern bool print_filename;
 
 /**
- * @brief Check the ELF class of a mapped file and display its symbols.
+ * @brief Read the symbols of a mapped ELF file and display them, preceded by
+ * the file name when several files are requested.
  *
- * @param addr Address of the mapped memory region.
- * @param file Path of the file being processed.
- * @return int. 0 on success, 1 if the file format is not recognized.
+ * The format check is not wired yet: the result of is_elf_format() is ignored.
+ *
+ * @param mapped Memory mapping of the ELF file.
+ * @param file Name displayed in the header, if any.
+ * @return int. Always 0 for now.
  */
 int display_elf_file(mappedmem_t* mapped, char* file) {
     /* Verify file format */

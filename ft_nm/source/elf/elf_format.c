@@ -17,6 +17,14 @@
 
 int arch_global;
 
+/**
+ * @brief Check the e_ident field of an ELF header: magic number, class,
+ * version and endianness. Set arch_global to the detected class.
+ *
+ * @param addr Address of the first byte of the mapped memory.
+ * @return int. 0 if the identification is valid, -1 otherwise (an error is
+ * printed). Only little endian files are supported.
+ */
 static int _test_elf_ident(void* addr) {
     char* n_ident = addr;
 
@@ -57,6 +65,13 @@ not_implemented:
     return print_err(ELF_NOT_IMPLEMENTED), -1;
 }
 
+/**
+ * @brief Check that the program and section header tables fit inside the
+ * mapped file. The checks are currently disabled, so it always succeeds.
+ *
+ * @param mapped Memory mapping of the file.
+ * @return int. 0 if the file is large enough, -1 otherwise.
+ */
 static int _test_file_size(mappedmem_t* mapped) {
     ElfN_Ehdr ehdr = {};
     Ehdr_to_generic(mapped->addr, &ehdr);
@@ -78,10 +93,10 @@ static int _test_file_size(mappedmem_t* mapped) {
 }
 
 /**
- * @brief
+ * @brief Check that a memory region holds a supported ELF file.
  *
- * @param addr
- * @return int
+ * @param mapped Memory mapping to check.
+ * @return int. 0 if the region is a supported ELF file, -1 otherwise.
  */
 int is_elf_format(mappedmem_t* mapped) {
     if (_test_elf_ident(mapped->addr) == -1) {

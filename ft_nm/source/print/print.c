@@ -20,10 +20,9 @@
 #include "xalloc.h"
 
 /**
- * @brief Global static variables.
- *
- * @param program_name Program name displayed by the print module.
- * @param filename Filename displayed by the print module.
+ * @brief State of the print module, set through print_set_program_name() and
+ * print_set_filename(). Both are prefixed to every error message. The strings
+ * are not copied, they must outlive the module.
  */
 static char* program_name;
 static char* filename;

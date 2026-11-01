@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/01 23:53:13 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 00:00:53 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
         usage(stdout, 0);
     }
 
-    /* Output filenames if more than one files have been requested */
+    /* Output filenames if more than one file have been requested */
     print_filename =
         (options.files[0] != nullptr && options.files[1] != nullptr);
 

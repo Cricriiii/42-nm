@@ -21,6 +21,12 @@
 #include "print.h"
 #include "resource_collector.h"
 
+/**
+ * @brief Set the locale category used by strcoll when sorting symbols, from
+ * the environment.
+ *
+ * @param locale Locale category (LC_COLLATE, LC_ALL...).
+ */
 void set_symbol_locale(int locale) {
     setlocale(locale, "");
 }
@@ -30,16 +36,15 @@ typedef struct nm_args nm_args_t;
 extern nm_args_t options;
 
 /**
- * @brief Compare function provided to qsort. Sort symbol names in ascending or
- * descending order, ignoring underscores. The comparison is done by strcoll
- * using the host system locales.
+ * @brief Compare function provided to qsort. Order symbols by name, in
+ * ascending or descending order. The comparison is done by strcoll, so it
+ * follows the collation rules of the current locale.
  *
- * @param a First pointer to elf_sym_print_t* to be compared.
- * @param b Second pointer to elf_sym_print_t* to be compared.
- * @return int. Difference between the first two differing characters, negated
- * if the reverse sort is requested.
+ * @param a Pointer to the first elf_sym_print_t* to compare.
+ * @param b Pointer to the second elf_sym_print_t* to compare.
+ * @return int. Negative, zero or positive as strcoll() does, with the sign
+ * inverted if the reverse sort is requested.
  */
-
 static int compare_on_name(const void* a, const void* b) {
     const char* s1 = (*(const elf_sym_print_t**)a)->name;
     const char* s2 = (*(const elf_sym_print_t**)b)->name;

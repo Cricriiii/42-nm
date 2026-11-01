@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/31 23:12:48 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/01 23:52:17 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/01 23:56:52 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,10 +21,11 @@
 extern bool print_filename;
 
 /**
- * @brief
+ * @brief Classify an archive member from the name field of its header.
  *
- * @param mapped
- * @return int
+ * @param hdr Header of the member to classify.
+ * @return AR_IS_SYM_TAB for the symbol table ("/"), AR_IS_STR_TAB for the
+ *         long name table ("//"), AR_REG_TAB for any other member.
  */
 static int _ar_is_hdr(struct ar_hdr* hdr) {
     if (ar_is_symbol_tab(hdr->ar_name)) {
@@ -37,11 +38,17 @@ static int _ar_is_hdr(struct ar_hdr* hdr) {
 }
 
 /**
- * @brief
+ * @brief Display the symbols of a regular archive member.
  *
- * @param mapped
- * @param ofst
- * @param long_name_table
+ * Resolve the member name (inline, or "/<offset>" into the long name table),
+ * strip the trailing '/' terminator, then print the symbols of the embedded
+ * ELF file under that name.
+ *
+ * @param mapped Memory mapping of the whole archive.
+ * @param ofst Offset of the member header from the start of the mapping.
+ * @param long_name_table Content of the "//" member, or nullptr if the
+ *        archive has none.
+ * @return 0 on success, AR_IS_ERR_FMT if the member is not a valid ELF file.
  */
 static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
                                    char* long_name_table) {
@@ -65,7 +72,7 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
             memset(printed_name, 0, len);
             char* end = strchr(name, '/');
             if (end) {
-                snprintf(printed_name, len, "%.*s", (int)(end - name), name);
+                snprintf(printed_name, len + 1, "%.*s", (int)(end - name), name);
             }
             display_elf_file(&tmp, printed_name);
         }
@@ -76,10 +83,16 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
 }
 
 /**
- * @brief
+ * @brief Walk an archive member by member and display each ELF member.
  *
- * @param mapped
- * @return int
+ * The symbol table ("/") must come first and appear at most once, the long
+ * name table ("//") must appear at most once. Any violation makes the archive
+ * malformed.
+ *
+ * @param mapped Memory mapping of the whole archive.
+ * @param file Archive path, printed as a header when print_filename is set.
+ * @return 0 on success, AR_MALFORMED if the special members are misplaced or
+ *         duplicated, AR_IS_ERR_FMT if a member is not a valid ELF file.
  */
 int display_ar_file(mappedmem_t* mapped, char* file) {
     void* cur_addr = mapped->addr + SARMAG;

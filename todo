@@ -5,3 +5,11 @@ archives .a
 
 
 https://elftoolchain.sourceforge.io/man/ar.5.html
+
+En relisant, j'ai vu quelques points qui ressemblent à des bugs. Je n'ai rien corrigé.
+
+- _display_ar_elf_segment, nom tronqué : snprintf(printed_name, len, ...) copie au plus len - 1 caractères. Le dernier caractère du nom est donc perdu. Il faut passer len + 1.
+- _display_ar_elf_segment, nom vide : si le nom n'a pas de /, printed_name reste vide. Les noms courts se terminent normalement par /, mais pas dans tous les archives.
+- _display_ar_elf_segment, table absente : si le nom est de la forme /123 et que long_name_table vaut nullptr, tu calcules nullptr + offset, ce qui plante. Il faut vérifier la table avant.
+- display_ar_file, alignement : les membres sont alignés sur 2 octets. Si ar_size est impair, il y a un octet de padding (\n) avant l'en-tête suivant. Ton step doit donc être arrondi au pair, sinon tu perds la synchronisation sur ce type d'archive.
+- display_ar_file, dépassement : rien ne vérifie qu'un en-tête complet tient dans le fichier avant de le lire.

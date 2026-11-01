@@ -47,7 +47,8 @@ int stat_file(int file_fd, struct stat* st) {
 }
 
 /**
- * @brief Map an open file into memory, in read-only mode.
+ * @brief Map an open file into memory, in read-only mode. The caller must
+ * release the mapping with munmap().
  *
  * @param file_fd File descriptor.
  * @param mapped Structure filled with the address and size of the mapping.
