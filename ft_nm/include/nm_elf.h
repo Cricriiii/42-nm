@@ -163,5 +163,4 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
  *
  */
 
-
 int is_elf_format(mappedmem_t* mapped);

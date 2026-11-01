@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/01 00:53:57 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/01 23:53:13 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,8 +17,8 @@
 #include <string.h>
 
 #include "file_manip.h"
-#include "nm_elf.h"
 #include "nm_ar.h"
+#include "nm_elf.h"
 #include "options.h"
 #include "print.h"
 #include "resource_collector.h"
@@ -33,30 +33,6 @@
  */
 nm_args_t options = {};
 bool print_filename = false;
-
-/**
- * @brief Check the ELF class of a mapped file and display its symbols.
- *
- * @param addr Address of the mapped memory region.
- * @param file Path of the file being processed.
- * @return int. 0 on success, 1 if the file format is not recognized.
- */
-static int display_file(void* addr, char* file) {
-    /* Verify file format */
-
-    /* Read arch-independant ELF file */
-    elf_sym_print_t** symbols = read_elfN(addr);
-
-    /* Output values on stdout */
-    if (print_filename)
-        printf("\n%s:\n", file);
-    print_symbols(symbols);
-
-    /* The symbol array was allocated by read_elfN, release it now */
-    del_ptr_resource(symbols);
-
-    return 0;
-}
 
 /**
  * @brief Program's core loop. Sequentially open, map and display each requested
@@ -99,9 +75,9 @@ static int mainloop(char** files) {
 
         /* Display ELF symbols */
         if (ar_is_signature(mapped.addr)) {
-            retval = ar_is_format(&mapped);
-        } else if (is_elf_format(&mapped) != -1) {
-            retval = display_file(mapped.addr, *file);
+            retval = display_ar_file(&mapped, *file);
+        } else {
+            retval = display_elf_file(&mapped, *file);
         }
 
         /* Release the mapped memory */

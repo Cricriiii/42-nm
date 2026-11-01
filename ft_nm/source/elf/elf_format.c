@@ -73,8 +73,8 @@ static int _test_file_size(mappedmem_t* mapped) {
     return 0;
 
     /* Error path return */
-// not_recognized:
-//     return print_err(ELF_NOT_RECOGNIZED), -1;
+    // not_recognized:
+    //     return print_err(ELF_NOT_RECOGNIZED), -1;
 }
 
 /**

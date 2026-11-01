@@ -19,7 +19,7 @@ Each sample counts as 0.01 seconds.
   0.00      2.35     0.00     4240     0.00     0.00  section_type_from_flags
   0.00      2.35     0.00     2240     0.00     0.00  is_debug_section
   0.00      2.35     0.00       80     0.00     0.00  del_fd_resource
-  0.00      2.35     0.00       80     0.00     0.03  display_file
+  0.00      2.35     0.00       80     0.00     0.03  display_elf_file
   0.00      2.35     0.00       80     0.00     0.00  get_symbol_sections
   0.00      2.35     0.00       80     0.00     0.00  map_file
   0.00      2.35     0.00       80     0.00     0.00  open_file
@@ -76,14 +76,14 @@ granularity: each sample hit covers 4 byte(s) for 0.43% of 2.35 seconds
 
 index % time    self  children    called     name
                 0.00    2.33      80/80          mainloop [2]
-[1]     99.1    0.00    2.33      80         display_file [1]
+[1]     99.1    0.00    2.33      80         display_elf_file [1]
                 0.02    2.29      80/80          print_symbols [4]
                 0.00    0.02      80/80          read_elfN [6]
                 0.00    0.00      80/649840      del_ptr_resource [5]
 -----------------------------------------------
                 0.00    2.33       1/1           main [3]
 [2]     99.1    0.00    2.33       1         mainloop [2]
-                0.00    2.33      80/80          display_file [1]
+                0.00    2.33      80/80          display_elf_file [1]
                 0.00    0.00      80/80          print_set_filename [24]
                 0.00    0.00      80/80          open_file [23]
                 0.00    0.00      80/80          store_fd_resource [26]
@@ -95,16 +95,16 @@ index % time    self  children    called     name
                 0.00    2.33       1/1           mainloop [2]
                 0.00    0.00       1/1           get_options [29]
 -----------------------------------------------
-                0.02    2.29      80/80          display_file [1]
+                0.02    2.29      80/80          display_elf_file [1]
 [4]     98.3    0.02    2.29      80         print_symbols [4]
                 2.29    0.00  649760/649840      del_ptr_resource [5]
 -----------------------------------------------
-                0.00    0.00      80/649840      display_file [1]
+                0.00    0.00      80/649840      display_elf_file [1]
                 2.29    0.00  649760/649840      print_symbols [4]
 [5]     97.4    2.29    0.00  649840         del_ptr_resource [5]
                 0.00    0.00  649840/1300095     get_instance [11]
 -----------------------------------------------
-                0.00    0.02      80/80          display_file [1]
+                0.00    0.02      80/80          display_elf_file [1]
 [6]      0.9    0.00    0.02      80         read_elfN [6]
                 0.01    0.00  650000/650000      Sym_to_generic [8]
                 0.00    0.01  650000/650000      get_symbol_type [9]
@@ -317,7 +317,7 @@ Index by function name
    [7] _init                  [14] is_external            [32] set_symbol_locale
   [20] del_fd_resource        [15] is_undef               [25] stat_file
    [5] del_ptr_resource        [2] mainloop (main.c)      [26] store_fd_resource
-   [1] display_file (main.c)  [22] map_file               [12] store_ptr_resource
+   [1] display_elf_file (main.c)  [22] map_file               [12] store_ptr_resource
   [27] extend_ptr_arr         [23] open_file              [13] xcalloc
   [11] get_instance (resource_collector.c) [24] print_set_filename [33] xmalloc_set_program_name
   [29] get_options            [31] print_set_program_name [28] xrealloc

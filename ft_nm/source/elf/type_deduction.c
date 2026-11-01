@@ -10,10 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <ctype.h>
 #include <stddef.h>
 #include <string.h>
-#include <ctype.h>
-
 
 #include "nm_elf.h"
 
@@ -160,8 +159,8 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
         const char* name =
             addr + symbol_tab->strings.sh_offset + sym_section.sh_name;
 
-        c = section_type_from_flags(sym_section.sh_flags,
-                                    sym_section.sh_type, name);
+        c = section_type_from_flags(sym_section.sh_flags, sym_section.sh_type,
+                                    name);
     }
 
     if (binding == STB_GLOBAL && islower(c)) {

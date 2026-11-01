@@ -14,10 +14,10 @@
 #include "print.h"
 
 /**
- * @brief 
- * 
- * @param addr 
- * @return ElfN_Ehdr 
+ * @brief
+ *
+ * @param addr
+ * @return ElfN_Ehdr
  */
 static ElfN_Ehdr Ehdr32to64(void* addr) {
     Elf32_Ehdr* raw = ehdr32(addr);
@@ -41,11 +41,11 @@ static ElfN_Ehdr Ehdr32to64(void* addr) {
 }
 
 /**
- * @brief 
- * 
- * @param addr 
- * @param generic 
- * @return int 
+ * @brief
+ *
+ * @param addr
+ * @param generic
+ * @return int
  */
 int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];
@@ -65,10 +65,10 @@ int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic) {
 }
 
 /**
- * @brief 
- * 
- * @param addr 
- * @return ElfN_Shdr 
+ * @brief
+ *
+ * @param addr
+ * @return ElfN_Shdr
  */
 static ElfN_Shdr Shdr32to64(void* addr) {
     Elf32_Shdr* raw = shdr32(addr);
@@ -89,12 +89,12 @@ static ElfN_Shdr Shdr32to64(void* addr) {
 }
 
 /**
- * @brief 
- * 
- * @param addr 
- * @param offset 
- * @param generic 
- * @return int 
+ * @brief
+ *
+ * @param addr
+ * @param offset
+ * @param generic
+ * @return int
  */
 int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];
@@ -114,10 +114,10 @@ int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic) {
 }
 
 /**
- * @brief 
- * 
- * @param addr 
- * @return ElfN_Sym 
+ * @brief
+ *
+ * @param addr
+ * @return ElfN_Sym
  */
 static ElfN_Sym Sym32to64(void* addr) {
     Elf32_Sym* raw = sym32(addr);
@@ -134,12 +134,12 @@ static ElfN_Sym Sym32to64(void* addr) {
 }
 
 /**
- * @brief 
- * 
- * @param addr 
- * @param offset 
- * @param generic 
- * @return int 
+ * @brief
+ *
+ * @param addr
+ * @param offset
+ * @param generic
+ * @return int
  */
 int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];
