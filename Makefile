@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/29 17:48:21 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/02 11:23:19 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -77,15 +77,47 @@ lre:
 # test                                                                         #
 # ---------------------------------------------------------------------------- #
 
-## Test ft_nm ouput against the real one
 T_PROG		?=
 T_ARGS		?=
+VALGRIND_	:= valgrind \
+				--quiet \
+				--leak-check=full \
+				--track-fds=yes \
+				--error-exitcode=42 \
+				--log-file=$(TEST_DIR)/valgrind.txt
+
+## Test ft_nm ouput against the real one
 test:
 	@mkdir -p $(TEST_DIR)
-	@time nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt || true
-	@time $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt || true
-	@diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm || true
-	
+	@for file in $(T_PROG); do \
+		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt || true; \
+		$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt || true; \
+		if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
+			echo "$$file: diff OK"; \
+		else \
+			echo "$$file: diff FAIL"; \
+		fi; \
+	done	
+
+## Equivalent to test with additional Valgrind checks
+test_valgrind:
+	@mkdir -p $(TEST_DIR)
+	@for file in $(T_PROG); do \
+		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt || true; \
+		$(VALGRIND_) $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt; \
+		ret=$$?; \
+		if [ $$ret -eq 42 ]; then \
+			echo "$$file: valgrind FAIL (see $(TEST_DIR)/valgrind.txt)"; \
+		else \
+			echo "$$file: valgrind OK"; \
+		fi; \
+		if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
+			echo "$$file: diff OK"; \
+		else \
+			echo "$$file: diff FAIL"; \
+		fi; \
+		echo; \
+	done
 
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #

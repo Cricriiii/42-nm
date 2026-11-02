@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/01 19:34:24 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/01 23:34:14 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 11:04:20 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,10 +30,9 @@ extern bool print_filename;
 int display_elf_file(mappedmem_t* mapped, char* file) {
     /* Verify file format */
     if (is_elf_format(mapped) != -1) {
-        
+        // don't forget
     }
 
-    
     /* Read arch-independant ELF file */
     elf_sym_print_t** symbols = read_elfN(mapped->addr);
 

@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/31 23:12:48 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/01 23:56:52 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 11:06:03 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,10 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
             if (end) {
                 snprintf(printed_name, len + 1, "%.*s", (int)(end - name), name);
             }
+            bool saved_print_state = print_filename;
+            print_filename = true;
             display_elf_file(&tmp, printed_name);
+            print_filename = saved_print_state;
         }
     } else {
         return AR_IS_ERR_FMT;
