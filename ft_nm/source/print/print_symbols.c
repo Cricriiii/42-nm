@@ -89,8 +89,7 @@ void print_symbols(elf_sym_print_t** symbols) {
         if ((*s)->undef) {
             printf("%*s %c %s\n", width, "", (*s)->type, (*s)->name);
         } else {
-            printf("%.*lx %c %s\n", width, (*s)->value, (*s)->type,
-                   (*s)->name);
+            printf("%.*lx %c %s\n", width, (*s)->value, (*s)->type, (*s)->name);
         }
     }
 }

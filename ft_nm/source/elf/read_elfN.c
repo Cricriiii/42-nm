@@ -74,9 +74,9 @@ const char* elf_str_at(void* addr, size_t size, const ElfN_Shdr* strtab,
  * @param sections Filled with the section name string table (.shstrtab).
  * @param symbols Filled with .symtab and its string table (.strtab).
  */
-static void get_symbol_sections(void* addr, size_t size,
-                                const ElfN_Ehdr* ehdr, size_t shnum,
-                                size_t shstrndx, elf_link_str_t* sections,
+static void get_symbol_sections(void* addr, size_t size, const ElfN_Ehdr* ehdr,
+                                size_t shnum, size_t shstrndx,
+                                elf_link_str_t* sections,
                                 elf_link_str_t* symbols) {
     size_t shdr_size =
         arch_global == ARCH64 ? sizeof(Elf64_Shdr) : sizeof(Elf32_Shdr);
@@ -163,7 +163,8 @@ elf_sym_print_t** read_elfN(void* addr, size_t size) {
 
     elf_link_str_t sections = {};
     elf_link_str_t symbols = {};
-    get_symbol_sections(addr, size, &ehdr, shnum, shstrndx, &sections, &symbols);
+    get_symbol_sections(addr, size, &ehdr, shnum, shstrndx, &sections,
+                        &symbols);
 
     if (symbols.is) {
         size_t n_sym = symbols.elems.sh_size / sym_size;
@@ -192,9 +193,9 @@ elf_sym_print_t** read_elfN(void* addr, size_t size) {
                                     : ELF32_ST_TYPE(s.st_info)) == STT_SECTION);
 
             /* symbol file */
-            nm_sym->file = ((arch_global == ARCH64 ? ELF64_ST_TYPE(s.st_info)
-                                                   : ELF32_ST_TYPE(s.st_info)) ==
-                            STT_FILE);
+            nm_sym->file = ((arch_global == ARCH64
+                                 ? ELF64_ST_TYPE(s.st_info)
+                                 : ELF32_ST_TYPE(s.st_info)) == STT_FILE);
 
             if (nm_sym->section) {
                 /* a section symbol is named after its section */
@@ -208,8 +209,8 @@ elf_sym_print_t** read_elfN(void* addr, size_t size) {
                 }
                 nm_sym->name = (char*)name;
             } else {
-                nm_sym->name = (char*)elf_str_at(addr, size, &symbols.strings,
-                                                 s.st_name);
+                nm_sym->name =
+                    (char*)elf_str_at(addr, size, &symbols.strings, s.st_name);
             }
 
             /* symbol value */
@@ -228,8 +229,7 @@ elf_sym_print_t** read_elfN(void* addr, size_t size) {
             }
 
             /* symbol type */
-            nm_sym->type =
-                get_symbol_type(addr, size, &sections, shnum, &s);
+            nm_sym->type = get_symbol_type(addr, size, &sections, shnum, &s);
 
             /* symbol external */
             nm_sym->external = is_external(s.st_shndx, s.st_info);

@@ -74,7 +74,8 @@ int map_file(int file_fd, mappedmem_t* mapped) {
     }
 
     mapped->size = st.st_size;
-    mapped->addr = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, file_fd, 0);
+    mapped->addr =
+        mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, file_fd, 0);
     if (mapped->addr == MAP_FAILED) {
         print_perror();
         return -1;

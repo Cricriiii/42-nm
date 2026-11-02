@@ -29,8 +29,7 @@ extern bool print_filename;
  * the long name table ("//"), AR_REG_TAB_RET for any other member.
  */
 static int _ar_is_hdr(struct ar_hdr* hdr) {
-    if (ar_is_symbol_tab(hdr->ar_name) ||
-        !memcmp(hdr->ar_name, "/SYM64/", 7)) {
+    if (ar_is_symbol_tab(hdr->ar_name) || !memcmp(hdr->ar_name, "/SYM64/", 7)) {
         return AR_IS_SYM_TAB_RET;
     } else if (ar_is_string_tab(hdr->ar_name)) {
         return AR_IS_STR_TAB_RET;
