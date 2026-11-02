@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/31 23:12:48 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 11:06:03 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 11:37:45 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,12 +72,13 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
             memset(printed_name, 0, len);
             char* end = strchr(name, '/');
             if (end) {
-                snprintf(printed_name, len + 1, "%.*s", (int)(end - name), name);
+                snprintf(printed_name, len + 1, "%.*s", (int)(end - name),
+                         name);
             }
-            bool saved_print_state = print_filename;
-            print_filename = true;
+            // bool saved_print_state = print_filename;
+            // print_filename = true;
             display_elf_file(&tmp, printed_name);
-            print_filename = saved_print_state;
+            // print_filename = saved_print_state;
         }
     } else {
         return AR_IS_ERR_FMT;
@@ -102,36 +103,41 @@ int display_ar_file(mappedmem_t* mapped, char* file) {
     int ar_sym_count = 0;
     int ar_str_count = 0;
     char* long_name_table = nullptr;
+    int retval = 0;
 
     if (print_filename) {
         printf("\n%s:\n", file);
     }
 
-    while (cur_addr - mapped->addr < (long)(mapped->size)) {
+    bool saved_print_state = print_filename;
+    print_filename = true;
+
+    while (retval != AR_MALFORMED &&
+           cur_addr - mapped->addr < (long)(mapped->size)) {
         int type = _ar_is_hdr(ar_hdr(cur_addr));
         switch (type) {
             case AR_IS_SYM_TAB:
                 if (ar_sym_count++ || ar_str_count)
-                    return AR_MALFORMED;
+                    retval = AR_MALFORMED;
                 break;
 
             case AR_IS_STR_TAB:
                 if (ar_str_count++)
-                    return AR_MALFORMED;
+                    retval = AR_MALFORMED;
                 long_name_table = (void*)(&ar_hdr(cur_addr)->ar_fmag) + 2;
                 break;
 
             default:
                 if (_display_ar_elf_segment(mapped, cur_addr - mapped->addr,
                                             long_name_table) == AR_IS_ERR_FMT) {
-                    return AR_IS_ERR_FMT;
+                    retval = AR_IS_ERR_FMT;
                 }
                 break;
         }
-
         size_t step = sizeof(struct ar_hdr) + atol(ar_hdr(cur_addr)->ar_size);
         cur_addr += step;
     }
 
-    return 0;
+    print_filename = saved_print_state;
+    return retval;
 }

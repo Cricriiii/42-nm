@@ -60,7 +60,7 @@ INCLUDES	:= $(INCLUDES:%=-I %)
 # build                                                                        #
 # ---------------------------------------------------------------------------- #
 
-## Build the 64-bit program
+## Build the 64-bit program (ft_nm)
 all:
 	+$(MAKE) $(PROGRAM)
 
@@ -75,7 +75,7 @@ $(OBJ_DIR_x64)/libs/%.o: $(LIB_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(C_FLAGS) $(INCLUDES) -c $< -o $@
 
-## Build the 32-bit program
+## Build the 32-bit program (ft_nm32)
 x86:
 	+$(MAKE) $(PROGRAM32)
 	
@@ -93,7 +93,7 @@ $(OBJ_DIR_x86)/libs/%.o: $(LIB_DIR)/%.c
 -include $(FILES_O_x64:.o=.d)
 -include $(FILES_O_x86:.o=.d)
 
-## Call 'fclean' then 'all'
+## Rebuild from scratch (fclean, then all)
 re:
 	+$(MAKE) fclean
 	+$(MAKE) all
@@ -103,11 +103,11 @@ re:
 # clean                                                                        #
 # ---------------------------------------------------------------------------- #
 
-## Delete .object directory
+## Delete the .object directory
 clean:
 	@rm -rf $(OBJ_DIR)
 
-# Call 'clean' and delete executable
+## Delete .object and both executables (ft_nm, ft_nm32)
 fclean:
 	+$(MAKE) clean
 	@rm -f $(WORKSPACE)/$(PROGRAM) $(WORKSPACE)/$(PROGRAM32)
@@ -116,7 +116,7 @@ fclean:
 # misc                                                                         #
 # ---------------------------------------------------------------------------- #
 
-## Format files
+## Format all .c and .h files with clang-format
 format:
 	@find . -name "*.c" -o -name "*.h" | xargs clang-format -i
 

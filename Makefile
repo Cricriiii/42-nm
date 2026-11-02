@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/02 11:23:19 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/02 11:59:49 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -61,14 +61,14 @@ run:
 		-it $(PROGRAM):$(TARGET) \
 		/bin/sh
 
-## Build on the host machine
+## Build on the host machine (make all in the local workspace)
 local:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) all
 
-## re docker
+## Rebuild the dockerized environment (TODO)
 re:
 	
-## re local
+## Rebuild in the local workspace
 lre:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) re
 
@@ -86,8 +86,36 @@ VALGRIND_	:= valgrind \
 				--error-exitcode=42 \
 				--log-file=$(TEST_DIR)/valgrind.txt
 
-## Test ft_nm ouput against the real one
-test:
+## Compare ft_nm and nm output on all T_PROG at once
+test_all:
+	@mkdir -p $(TEST_DIR)
+	@nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt || true;
+	@$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt || true;
+	@if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
+		echo "diff OK"; \
+	else \
+		echo "diff FAIL"; \
+	fi; \
+
+## Same as test_all, plus a Valgrind check per file (leaks, fds)
+test_all_valgrind:
+	@mkdir -p $(TEST_DIR)
+	@nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt || true;
+	@$(VALGRIND_) $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt; \
+	ret=$$?; \
+	if [ $$ret -eq 42 ]; then \
+		echo "valgrind: FAIL (see $(TEST_DIR)/valgrind.txt)"; \
+	else \
+		echo "valgrind: OK"; \
+	fi; \
+	if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
+		echo "diff: OK"; \
+	else \
+		echo "diff: FAIL"; \
+	fi; \
+
+## Like test_all, but one file at a time (per-file verdict)
+test_each:
 	@mkdir -p $(TEST_DIR)
 	@for file in $(T_PROG); do \
 		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt || true; \
@@ -99,22 +127,24 @@ test:
 		fi; \
 	done	
 
-## Equivalent to test with additional Valgrind checks
-test_valgrind:
+
+## Like test_each, plus Valgrind checks per file (leaks, fds)
+test_each_valgrind:
 	@mkdir -p $(TEST_DIR)
 	@for file in $(T_PROG); do \
 		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt || true; \
 		$(VALGRIND_) $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt; \
 		ret=$$?; \
+		echo "$$file:"; \
 		if [ $$ret -eq 42 ]; then \
-			echo "$$file: valgrind FAIL (see $(TEST_DIR)/valgrind.txt)"; \
+			echo "\tvalgrind: FAIL (see $(TEST_DIR)/valgrind.txt)"; \
 		else \
-			echo "$$file: valgrind OK"; \
+			echo "\tvalgrind: OK"; \
 		fi; \
 		if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
-			echo "$$file: diff OK"; \
+			echo "\tdiff    : OK"; \
 		else \
-			echo "$$file: diff FAIL"; \
+			echo "\tdiff    : FAIL"; \
 		fi; \
 		echo; \
 	done
@@ -123,30 +153,27 @@ test_valgrind:
 # clean                                                                        #
 # ---------------------------------------------------------------------------- #
 
-## clean
+## Clean object files (local build)
 clean:
 	+$(MAKE) lclean
 
-## fclean
+## Clean objects, binary and test files
 fclean:
 	@rm -rf $(TEST_DIR)
 	+$(MAKE) lfclean
 
 
-## local clean
+## Clean object files in the local workspace
 lclean:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) clean
 
-## local fclean
+## Full clean in the local workspace
 lfclean:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) fclean
 
-## reset
+## Reset the dockerized environment (TODO)
 reset:
 
-## local reset
-lreset:
-	+$(MAKE) -C $(WORKSPACE_LOCAL) reset
 
 # ---------------------------------------------------------------------------- #
 # misc                                                                         #
@@ -171,4 +198,4 @@ help:
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
 	@echo
 
-.PHONY: all run test local re lre clean lclean fclean lfclean reset lreset format help
+.PHONY: all run local re lre test test_valgrind test_each test_each_valgrind clean lclean fclean lfclean reset lreset format help
