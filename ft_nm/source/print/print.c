@@ -12,6 +12,7 @@
 
 #include "print.h"
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -86,9 +87,22 @@ static char* error_header(void) {
  *
  */
 void print_perror(void) {
+    /* nm words a missing file differently from strerror() */
+    if (errno == ENOENT) {
+        fprintf(stderr, "%s: '%s': No such file\n", program_name, filename);
+        return;
+    }
     char* err_header = error_header();
     perror(err_header);
     free(err_header);
+}
+
+/**
+ * @brief Prints "program_name: Warning: 'filename' is a directory" on stderr.
+ */
+void print_warning_directory(void) {
+    fprintf(stderr, "%s: Warning: '%s' is a directory\n", program_name,
+            filename);
 }
 
 /**

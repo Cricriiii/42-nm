@@ -17,59 +17,78 @@
 #include "resource_collector.h"
 #include "xalloc.h"
 
-typedef struct nm_args nm_args_t;
-
 extern int arch_global;
 
-extern nm_args_t options;
+/**
+ * @brief String displayed instead of a name that can't be read safely.
+ */
+#define ELF_CORRUPT_NAME "<corrupt>"
 
 /**
- * @brief Interpret the 16-byte identification field (e_ident) of the ELF
- * header.
+ * @brief Tell whether the contents of a section lie entirely inside the file.
+ * Written to never overflow, whatever the values of a corrupted header.
  *
- * @param addr Address of the first byte of the mapped memory.
- * @return elf_ei_t. Structure holding the identification fields.
+ * @param size Size of the file in bytes.
+ * @param s Section header.
+ * @return int. 1 if the whole section is inside the file, 0 otherwise.
  */
-elf_ei_t read_elf_ident(void* addr) {
-    char* ident = (char*)addr;
-    return (elf_ei_t){
-        .mag0 = ident[0],
-        .mag1 = ident[1],
-        .mag2 = ident[2],
-        .mag3 = ident[3],
-        .class = ident[4],
-        .data = ident[5],
-        .version = ident[6],
-        .osabi = ident[7],
-        .abiversion = ident[8],
-    };
+static int section_in_file(size_t size, const ElfN_Shdr* s) {
+    return s->sh_offset <= size && s->sh_size <= size - s->sh_offset;
 }
 
 /**
- * @brief Locate the section name string table, .symtab and .dynsym of an ELF
- * file, along with the string table linked to each symbol table. A null
- * pointer skips the matching output.
+ * @brief Get a string of a string table, only if it is entirely readable: the
+ * table must be inside the file, the offset inside the table, and the string
+ * must be null terminated before the end of the table.
  *
  * @param addr Address of the start of the ELF file.
+ * @param size Size of the file in bytes.
+ * @param strtab Header of the string table.
+ * @param off Offset of the string in the table.
+ * @return const char*. The string, or "<corrupt>" if it can't be read.
+ */
+const char* elf_str_at(void* addr, size_t size, const ElfN_Shdr* strtab,
+                       size_t off) {
+    if (!section_in_file(size, strtab) || off >= strtab->sh_size) {
+        return ELF_CORRUPT_NAME;
+    }
+    const char* str = (const char*)addr + strtab->sh_offset + off;
+    if (!memchr(str, '\0', strtab->sh_size - off)) {
+        return ELF_CORRUPT_NAME;
+    }
+    return str;
+}
+
+/**
+ * @brief Locate the section name string table and .symtab of an ELF file, along
+ * with the string table linked to the symbol table. A null pointer skips the
+ * matching output. A symbol table that is unusable (not
+ * inside the file, or with an entry size that isn't the one of a symbol) is
+ * ignored.
+ *
+ * @param addr Address of the start of the ELF file.
+ * @param size Size of the file in bytes.
+ * @param ehdr ELF header of the file.
+ * @param shnum Number of sections, extended numbering resolved.
+ * @param shstrndx Index of the section name string table, resolved.
  * @param sections Filled with the section name string table (.shstrtab).
  * @param symbols Filled with .symtab and its string table (.strtab).
- * @param dynamic Filled with .dynsym and its string table (.dynstr).
  */
-static void get_symbol_sections(void* addr, elf_link_str_t* sections,
-                                elf_link_str_t* symbols,
-                                elf_link_str_t* dynamic) {
-    ElfN_Ehdr ehdr = {};
-    Ehdr_to_generic(addr, &ehdr);
-
+static void get_symbol_sections(void* addr, size_t size,
+                                const ElfN_Ehdr* ehdr, size_t shnum,
+                                size_t shstrndx, elf_link_str_t* sections,
+                                elf_link_str_t* symbols) {
     size_t shdr_size =
         arch_global == ARCH64 ? sizeof(Elf64_Shdr) : sizeof(Elf32_Shdr);
+    size_t sym_size =
+        arch_global == ARCH64 ? sizeof(Elf64_Sym) : sizeof(Elf32_Sym);
 
-    for (ElfN_Half i = 0; i < ehdr.e_shnum; ++i) {
+    for (size_t i = 0; i < shnum; ++i) {
         ElfN_Shdr s = {};
-        Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * i, &s);
+        Shdr_to_generic(addr, ehdr->e_shoff + shdr_size * i, &s);
 
-        if (i == ehdr.e_shstrndx) {
-            /* get e_shstrndx from ehdr */
+        if (i == shstrndx) {
+            /* get the shstrndx section from ehdr */
             if (sections) {
                 (*sections).elems = (ElfN_Shdr){};
                 (*sections).strings = s;
@@ -77,22 +96,18 @@ static void get_symbol_sections(void* addr, elf_link_str_t* sections,
             }
 
         } else if (s.sh_type == SHT_SYMTAB) {
-            /* in .symtab, read .strtab index */
-            if (symbols) {
-                (*symbols).elems = s;
-                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.sh_link,
-                                &(*symbols).strings);
-                (*symbols).is = 1;
+            if (!symbols || s.sh_entsize != sym_size ||
+                !section_in_file(size, &s)) {
+                continue;
             }
-
-        } else if (s.sh_type == SHT_DYNSYM) {
-            /* in .dynsym, read .dynstr index */
-            if (dynamic) {
-                (*dynamic).elems = s;
-                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.sh_link,
-                                &(*dynamic).strings);
-                (*dynamic).is = 1;
+            symbols->elems = s;
+            /* the linked string table, checked when a name is read */
+            symbols->strings = (ElfN_Shdr){};
+            if (s.sh_link < shnum) {
+                Shdr_to_generic(addr, ehdr->e_shoff + shdr_size * s.sh_link,
+                                &symbols->strings);
             }
+            symbols->is = 1;
         }
     }
 }
@@ -103,39 +118,60 @@ static void get_symbol_sections(void* addr, elf_link_str_t* sections,
  * collector. The first element is the null symbol, and the array is null
  * terminated.
  *
+ * Nothing is read outside of the file: the fields read from the headers are
+ * checked first, and a name that can't be read is displayed as "<corrupt>".
+ *
  * @param addr Address of the start of the ELF file.
- * @return elf_sym_print_t**. Array of symbols, nullptr if there is no .symtab.
+ * @param size Size of the file in bytes.
+ * @return elf_sym_print_t**. Array of symbols, nullptr if there is no usable
+ * .symtab.
  */
-elf_sym_print_t** read_elfN(void* addr) {
+elf_sym_print_t** read_elfN(void* addr, size_t size) {
     elf_sym_print_t** ret_array = nullptr;
 
     ElfN_Ehdr ehdr = {};
-    if (Ehdr_to_generic(addr, &ehdr) == -1) {
-        ;  // treat error
+    Ehdr_to_generic(addr, &ehdr);
+
+    size_t shdr_size, sym_size;
+    if (arch_global == ARCH64) {
+        shdr_size = sizeof(Elf64_Shdr);
+        sym_size = sizeof(Elf64_Sym);
+    } else {
+        shdr_size = sizeof(Elf32_Shdr);
+        sym_size = sizeof(Elf32_Sym);
     }
 
-    elf_link_str_t sections = {};  // encore a faire
+    /* No section header table: nothing to read */
+    if (ehdr.e_shoff == 0) {
+        return nullptr;
+    }
+
+    /* Extended numbering: the real values are stored in section 0, whose
+     * position was checked by is_elf_format */
+    size_t shnum = ehdr.e_shnum;
+    size_t shstrndx = ehdr.e_shstrndx;
+    if (shnum == 0 || shstrndx == SHN_XINDEX) {
+        ElfN_Shdr first = {};
+        Shdr_to_generic(addr, ehdr.e_shoff, &first);
+        if (shnum == 0) {
+            shnum = first.sh_size;
+        }
+        if (shstrndx == SHN_XINDEX) {
+            shstrndx = first.sh_link;
+        }
+    }
+
+    elf_link_str_t sections = {};
     elf_link_str_t symbols = {};
-    elf_link_str_t dynamic = {};
-    get_symbol_sections(addr, &sections, &symbols, &dynamic);
+    get_symbol_sections(addr, size, &ehdr, shnum, shstrndx, &sections, &symbols);
 
     if (symbols.is) {
-        size_t n_sym = symbols.elems.sh_size / symbols.elems.sh_entsize;
+        size_t n_sym = symbols.elems.sh_size / sym_size;
 
         ret_array = xcalloc(n_sym + 1, sizeof(elf_sym_print_t*));
         store_ptr_resource(ret_array);
 
         size_t cur_sym_idx = 0;
-
-        size_t shdr_size, sym_size;
-
-        if (arch_global == ARCH64) {
-            shdr_size = sizeof(Elf64_Shdr);
-            sym_size = sizeof(Elf64_Sym);
-        } else {
-            shdr_size = sizeof(Elf32_Shdr);
-            sym_size = sizeof(Elf32_Sym);
-        }
 
         /* Convert each raw symbol into its displayable form */
         for (size_t i = 0; i < n_sym; ++i) {
@@ -155,21 +191,35 @@ elf_sym_print_t** read_elfN(void* addr) {
                                     ? ELF64_ST_TYPE(s.st_info)
                                     : ELF32_ST_TYPE(s.st_info)) == STT_SECTION);
 
+            /* symbol file */
+            nm_sym->file = ((arch_global == ARCH64 ? ELF64_ST_TYPE(s.st_info)
+                                                   : ELF32_ST_TYPE(s.st_info)) ==
+                            STT_FILE);
+
             if (nm_sym->section) {
-                ElfN_Shdr sym_section = {};
-                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.st_shndx,
-                                &sym_section);
-                nm_sym->name =
-                    addr + sections.strings.sh_offset + sym_section.sh_name;
+                /* a section symbol is named after its section */
+                const char* name = ELF_CORRUPT_NAME;
+                if (s.st_shndx < shnum) {
+                    ElfN_Shdr sym_section = {};
+                    Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.st_shndx,
+                                    &sym_section);
+                    name = elf_str_at(addr, size, &sections.strings,
+                                      sym_section.sh_name);
+                }
+                nm_sym->name = (char*)name;
             } else {
-                nm_sym->name = addr + symbols.strings.sh_offset + s.st_name;
-                ;
+                nm_sym->name = (char*)elf_str_at(addr, size, &symbols.strings,
+                                                 s.st_name);
             }
 
             /* symbol value */
             nm_sym->value = s.st_value;
+            if (s.st_shndx == SHN_COMMON) {
+                /* common symbol: st_value is an alignment, nm shows the size */
+                nm_sym->value = s.st_size;
+            }
             if (ehdr.e_type == ET_REL && s.st_shndx != SHN_UNDEF &&
-                s.st_shndx < SHN_LORESERVE) {
+                s.st_shndx < SHN_LORESERVE && s.st_shndx < shnum) {
                 /* relocatable: nm (BFD) prints st_value + section address */
                 ElfN_Shdr val_section = {};
                 Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.st_shndx,
@@ -178,7 +228,8 @@ elf_sym_print_t** read_elfN(void* addr) {
             }
 
             /* symbol type */
-            nm_sym->type = get_symbol_type(addr, &sections, ehdr.e_shnum, &s);
+            nm_sym->type =
+                get_symbol_type(addr, size, &sections, shnum, &s);
 
             /* symbol external */
             nm_sym->external = is_external(s.st_shndx, s.st_info);

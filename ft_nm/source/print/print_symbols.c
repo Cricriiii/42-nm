@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 17:48:05 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 18:06:56 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,10 +30,6 @@
 void set_symbol_locale(int locale) {
     setlocale(locale, "");
 }
-
-/* Parsed command line options, defined in main.c */
-typedef struct nm_args nm_args_t;
-extern nm_args_t options;
 
 /**
  * @brief Compare function provided to qsort. Order symbols by name, in
@@ -81,30 +77,20 @@ void print_symbols(elf_sym_print_t** symbols) {
 
     for (elf_sym_print_t** s = symbols + 1; *s; ++s) {
         /* Skip the symbols filtered out by the options */
-        if ((!options.debug_syms &&
-             ((*s)->section || (*s)->type == 'a')) ||
+        if ((!options.debug_syms && ((*s)->section || (*s)->file)) ||
             (options.extern_only && !(*s)->external) ||
             (options.undef_only && !(*s)->undef)) {
             continue;
         }
 
-        int arch = (*s)->arch;
-        size_t len_buf = strlen((*s)->name) + (arch >> 2) + 3;
-        char buf[len_buf];
-        memset(buf, 0, len_buf);
+        int width = arch_hex_width((*s)->arch);
 
         /* Undefined symbols are padded instead of having their value printed */
-        if (!(*s)->undef) {
-            sprintf(buf, "%.*lx %c %s", (arch >> 2), (*s)->value, (*s)->type,
-                    (*s)->name);
+        if ((*s)->undef) {
+            printf("%*s %c %s\n", width, "", (*s)->type, (*s)->name);
         } else {
-            sprintf(buf, "        ");
-            sprintf(buf + 8 * (arch == ARCH64), "         %c %s", (*s)->type,
-                    (*s)->name);
+            printf("%.*lx %c %s\n", width, (*s)->value, (*s)->type,
+                   (*s)->name);
         }
-        printf("%s\n", buf);
-
-        /* Suppressed, this increase dramatically the execution time */
-        // del_ptr_resource(*s);
     }
 }

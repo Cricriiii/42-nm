@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/01 00:22:23 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/02 19:20:37 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,7 @@ CC32		:= $(CC) -m32
 C_STD		:= -std=c23
 C_OPT		:= #-O3
 C_ERR		:= -Wall -Wextra -Werror
-C_DBG		:= -g3
+C_DBG		:= -g3 # -fsanitize=address,undefined
 C_DEP		:= -MD -MMD
 
 C_PROF		:= #-pg

@@ -47,20 +47,8 @@
 #define ARCH64 64
 #define ARCHERR -1
 
-/* Fields of the e_ident array of the ELF header */
-typedef struct elf_ei {
-    int32_t mag0;
-    int32_t mag1;
-    int32_t mag2;
-    int32_t mag3;
-    int32_t class;
-    int32_t data;
-    int32_t version;
-    int32_t osabi;
-    int32_t abiversion;
-} elf_ei_t;
-
-elf_ei_t read_elf_ident(void* addr);
+/* Number of hex digits of a displayed symbol value */
+#define arch_hex_width(arch) ((arch) >> 2)
 
 /**
  * @brief Architecture-independant types
@@ -124,6 +112,7 @@ typedef struct elf_sym_print {
     int external; /* Set for external symbols */
     int undef;    /* Set for undefined symbols */
     int section;  /* Set for STT_SECTION symbols */
+    int file;     /* Set for STT_FILE symbols */
 } elf_sym_print_t;
 
 /* A table section header and the header of its linked string table */
@@ -144,7 +133,9 @@ int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic);
 /**
  * @brief read_elfN.c - Read ELF files. Architecture-independant.
  */
-elf_sym_print_t** read_elfN(void* addr);
+elf_sym_print_t** read_elfN(void* addr, size_t size);
+const char* elf_str_at(void* addr, size_t size, const ElfN_Shdr* strtab,
+                       size_t off);
 
 /**
  * @brief type_deduction.c - Contains the type deduction utilities
@@ -155,8 +146,8 @@ int section_type_from_name(const char* name);
 int is_undef(ElfN_Section st_shndx);
 int is_external(ElfN_Section st_shndx, unsigned char st_info);
 
-int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
-                    ElfN_Half shnum, const ElfN_Sym* s);
+int get_symbol_type(void* addr, size_t size, const elf_link_str_t* symbol_tab,
+                    size_t shnum, const ElfN_Sym* s);
 
 /**
  * @brief format.c - ELF integrity checks

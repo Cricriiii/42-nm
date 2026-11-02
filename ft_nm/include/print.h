@@ -24,6 +24,7 @@ void print_set_program_name(const char* pname);
 void print_set_filename(const char* fname);
 [[noreturn]] void usage(FILE* stream, int status);
 void print_perror(void);
+void print_warning_directory(void);
 void print_err(const char* errmsg);
 void print_symbols(elf_sym_print_t** symbols);
 

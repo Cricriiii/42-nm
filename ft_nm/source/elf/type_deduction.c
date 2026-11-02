@@ -101,13 +101,14 @@ static int section_type_from_flags(ElfN_Xword section_flag,
  * uppercase for global symbols and lowercase for local ones.
  *
  * @param addr Address of the start of the ELF file.
+ * @param size Size of the file in bytes.
  * @param symbol_tab Section name string table of the file.
  * @param shnum Number of section headers of the file.
  * @param s Symbol to deduce the letter for.
  * @return int. Letter as displayed by nm.
  */
-int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
-                    ElfN_Half shnum, const ElfN_Sym* s) {
+int get_symbol_type(void* addr, size_t size, const elf_link_str_t* symbol_tab,
+                    size_t shnum, const ElfN_Sym* s) {
     /* type and binding */
     unsigned char binding, type;
     size_t shdr_size;
@@ -156,8 +157,8 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
         Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s->st_shndx,
                         &sym_section);
 
-        const char* name =
-            addr + symbol_tab->strings.sh_offset + sym_section.sh_name;
+        const char* name = elf_str_at(addr, size, &symbol_tab->strings,
+                                      sym_section.sh_name);
 
         c = section_type_from_flags(sym_section.sh_flags, sym_section.sh_type,
                                     name);

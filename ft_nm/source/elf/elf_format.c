@@ -149,6 +149,9 @@ static int _test_file_size(mappedmem_t* mapped) {
  * ELF_ERR_NOT_RECOGNIZED or ELF_ERR_NOT_IMPLEMENTED.
  */
 int is_elf_format(mappedmem_t* mapped) {
+    if (mapped->size < EI_NIDENT) {
+        return ELF_ERR_NOT_RECOGNIZED;
+    }
     int err = _test_elf_ident(mapped->addr);
     if (err != ELF_OK) {
         return err;

@@ -22,4 +22,7 @@ typedef struct nm_args {
     char** files;     /* Null terminated array of file paths */
 } nm_args_t;
 
+/* Parsed command line options, defined in main.c */
+extern nm_args_t options;
+
 int get_options(int n_args, char** args, nm_args_t* out);

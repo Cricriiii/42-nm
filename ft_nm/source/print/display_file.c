@@ -45,7 +45,7 @@ int display_elf_file(mappedmem_t* mapped, char* file) {
     }
 
     /* Read arch-independant ELF file */
-    elf_sym_print_t** symbols = read_elfN(mapped->addr);
+    elf_sym_print_t** symbols = read_elfN(mapped->addr, mapped->size);
 
     /* Output values on stdout */
     if (print_filename) {

@@ -39,7 +39,7 @@ bool print_filename = false;
  * file.
  *
  * @param files Array of file paths.
- * @return int. Returns the status code of the last processed file.
+ * @return int. 0 if every file was processed, 1 if at least one failed.
  */
 static int mainloop(char** files) {
     int retval = 0;
@@ -50,34 +50,33 @@ static int mainloop(char** files) {
         /* Acquire file descriptor */
         int file_fd;
         if ((file_fd = open_file(*file)) == -1) {
-            switch (errno) {
-                case EMFILE:
-                case ENFILE:
-                    retval = 127;
-                    break;
-                default:
-                    retval = 1;
-                    break;
-            }
+            retval = 1;
             continue;
         }
         store_fd_resource(file_fd);
 
-        /* Map the file into memory */
+        /* Map the file into memory. On failure map_file reports the error
+         * itself, skip to the next file */
         mappedmem_t mapped = {};
         if (map_file(file_fd, &mapped) == -1) {
-            print_perror();
-            exit(retval = 1);
+            retval = 1;
+            del_fd_resource(file_fd);
+            continue;
         }
 
         /* Release file descriptor, only keep the mapped memory */
         del_fd_resource(file_fd);
 
-        /* Display ELF symbols */
-        if (ar_is_signature(mapped.addr)) {
-            retval = display_ar_file(&mapped, *file);
+        /* Display ELF symbols. Like nm, the status reports a failure on any of
+         * the files, not only the last one */
+        int status;
+        if (mapped.size >= SARMAG && ar_is_signature(mapped.addr)) {
+            status = display_ar_file(&mapped, *file);
         } else {
-            retval = display_elf_file(&mapped, *file);
+            status = display_elf_file(&mapped, *file);
+        }
+        if (status != 0) {
+            retval = 1;
         }
 
         /* Release the mapped memory */
@@ -92,7 +91,7 @@ static int mainloop(char** files) {
  *
  * @param argc Number of command line arguments.
  * @param argv Command line arguments.
- * @return int. Error code of the last processed file.
+ * @return int. 0 if every file was processed, 1 if at least one failed.
  */
 int main(int argc, char** argv) {
     /* Parse the command line arguments */

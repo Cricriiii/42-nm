@@ -17,6 +17,7 @@
 
 #define AR_IS_ERR_FMT_RET -1
 #define AR_MALFORMED_RET -2
+#define AR_TRUNCATED_RET -3
 
 /* Archive symbol table. If present, must be the first. */
 #define AR_SYM_TAB "/               "
