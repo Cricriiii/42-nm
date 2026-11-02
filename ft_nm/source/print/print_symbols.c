@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/29 23:41:04 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 17:48:05 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,7 +82,7 @@ void print_symbols(elf_sym_print_t** symbols) {
     for (elf_sym_print_t** s = symbols + 1; *s; ++s) {
         /* Skip the symbols filtered out by the options */
         if ((!options.debug_syms &&
-             ((*s)->section || (*s)->type == 'a' || (*s)->type == 'N')) ||
+             ((*s)->section || (*s)->type == 'a')) ||
             (options.extern_only && !(*s)->external) ||
             (options.undef_only && !(*s)->undef)) {
             continue;

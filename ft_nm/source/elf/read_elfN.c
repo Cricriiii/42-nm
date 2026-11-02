@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 15:38:27 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/30 12:01:07 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 17:32:52 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -168,6 +168,14 @@ elf_sym_print_t** read_elfN(void* addr) {
 
             /* symbol value */
             nm_sym->value = s.st_value;
+            if (ehdr.e_type == ET_REL && s.st_shndx != SHN_UNDEF &&
+                s.st_shndx < SHN_LORESERVE) {
+                /* relocatable: nm (BFD) prints st_value + section address */
+                ElfN_Shdr val_section = {};
+                Shdr_to_generic(addr, ehdr.e_shoff + shdr_size * s.st_shndx,
+                                &val_section);
+                nm_sym->value += val_section.sh_addr;
+            }
 
             /* symbol type */
             nm_sym->type = get_symbol_type(addr, &sections, ehdr.e_shnum, &s);

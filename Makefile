@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/02 11:59:49 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/02 16:50:21 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -118,25 +118,44 @@ test_all_valgrind:
 test_each:
 	@mkdir -p $(TEST_DIR)
 	@for file in $(T_PROG); do \
-		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt || true; \
-		$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt || true; \
+		if [ -d $$file ]; then \
+			continue; \
+		fi; \
+		echo "*************************************************************\n"; \
+		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt; \
+		ret_nm=$$?; \
+		$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt; \
+		ret_ft_nm=$$?; \
+		echo; \
 		if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
 			echo "$$file: diff OK"; \
 		else \
 			echo "$$file: diff FAIL"; \
 		fi; \
-	done	
+		if [ $$ret_nm -eq $$ret_ft_nm ]; then \
+			echo "$$file: return OK"; \
+		else \
+			echo "$$file: return FAIL"; \
+		fi; \
+		echo; \
+	done; \
+	echo "*************************************************************\n"
 
 
 ## Like test_each, plus Valgrind checks per file (leaks, fds)
 test_each_valgrind:
 	@mkdir -p $(TEST_DIR)
 	@for file in $(T_PROG); do \
-		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt || true; \
+		if [ -d $$file ]; then \
+			continue; \
+		fi; \
+		echo "*************************************************************\n"; \
+		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt; \
 		$(VALGRIND_) $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt; \
-		ret=$$?; \
-		echo "$$file:"; \
-		if [ $$ret -eq 42 ]; then \
+		ret_nm=$$?; \
+		ret_ft_nm=$$?; \
+		echo; \
+		if [ $$ret_ft_nm -eq 42 ]; then \
 			echo "\tvalgrind: FAIL (see $(TEST_DIR)/valgrind.txt)"; \
 		else \
 			echo "\tvalgrind: OK"; \
@@ -146,8 +165,15 @@ test_each_valgrind:
 		else \
 			echo "\tdiff    : FAIL"; \
 		fi; \
+		if [ $$ret_nm -eq $$ret_ft_nm ]; then \
+			echo "\treturn  : OK"; \
+		else \
+			echo "\treturn  : return FAIL"; \
+		fi; \
 		echo; \
-	done
+	done ; \
+	echo "*************************************************************\n"
+
 
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #

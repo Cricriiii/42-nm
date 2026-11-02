@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:03:37 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/21 12:38:28 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 12:07:46 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,7 +47,7 @@ int get_options(int n_args, char** args, nm_args_t* out) {
 
     /* Read expected options */
     while ((opt = getopt_long(n_args, args, short_options, long_options,
-                              nullptr)) != -1) {
+                              nullptr)) != EOF) {
         switch (opt) {
             case 'a':
                 out->debug_syms = true;

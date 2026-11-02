@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/31 23:12:48 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 11:37:45 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 15:02:24 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,16 +24,16 @@ extern bool print_filename;
  * @brief Classify an archive member from the name field of its header.
  *
  * @param hdr Header of the member to classify.
- * @return AR_IS_SYM_TAB for the symbol table ("/"), AR_IS_STR_TAB for the
- *         long name table ("//"), AR_REG_TAB for any other member.
+ * @return AR_IS_SYM_TAB_RET for the symbol table ("/"), AR_IS_STR_TAB_RET for
+ * the long name table ("//"), AR_REG_TAB_RET for any other member.
  */
 static int _ar_is_hdr(struct ar_hdr* hdr) {
     if (ar_is_symbol_tab(hdr->ar_name)) {
-        return AR_IS_SYM_TAB;
+        return AR_IS_SYM_TAB_RET;
     } else if (ar_is_string_tab(hdr->ar_name)) {
-        return AR_IS_STR_TAB;
+        return AR_IS_STR_TAB_RET;
     } else {
-        return AR_REG_TAB;
+        return AR_REG_TAB_RET;
     }
 }
 
@@ -48,12 +48,21 @@ static int _ar_is_hdr(struct ar_hdr* hdr) {
  * @param ofst Offset of the member header from the start of the mapping.
  * @param long_name_table Content of the "//" member, or nullptr if the
  *        archive has none.
- * @return 0 on success, AR_IS_ERR_FMT if the member is not a valid ELF file.
+ * @return 0 on success, AR_IS_ERR_FMT_RET if the member is not a valid ELF
+ * file.
  */
-static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
+static int _display_ar_elf_segment(mappedmem_t* mapped, size_t ofst,
                                    char* long_name_table) {
     char* name = nullptr;
     void* cur_addr = mapped->addr + ofst;
+
+    /* Check that EOF not met */
+    if (ofst > mapped->size) {
+        return EOF;
+    }
+    if (ofst > mapped->size - sizeof(struct ar_hdr)) {
+        return AR_MALFORMED_RET;
+    }
 
     if (ar_hdr(cur_addr)->ar_name[0] == '/' &&
         isdigit(ar_hdr(cur_addr)->ar_name[1])) {
@@ -62,9 +71,10 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
         name = ar_hdr(cur_addr)->ar_name;
     }
 
-    mappedmem_t tmp = {.addr = cur_addr + sizeof(struct ar_hdr),
-                       .size = mapped->size - ofst - sizeof(struct ar_hdr)};
-    if (is_elf_format(&tmp) == 0) {
+    mappedmem_t cur_memory = {
+        .addr = cur_addr + sizeof(struct ar_hdr),
+        .size = mapped->size - ofst - sizeof(struct ar_hdr)};
+    if (is_elf_format(&cur_memory) == 0) {
         size_t len = 0;
         if (name) {
             len = strlen(name);
@@ -75,13 +85,10 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
                 snprintf(printed_name, len + 1, "%.*s", (int)(end - name),
                          name);
             }
-            // bool saved_print_state = print_filename;
-            // print_filename = true;
-            display_elf_file(&tmp, printed_name);
-            // print_filename = saved_print_state;
+            display_elf_file(&cur_memory, printed_name);
         }
     } else {
-        return AR_IS_ERR_FMT;
+        return AR_IS_ERR_FMT_RET;
     }
     return 0;
 }
@@ -95,8 +102,8 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, off_t ofst,
  *
  * @param mapped Memory mapping of the whole archive.
  * @param file Archive path, printed as a header when print_filename is set.
- * @return 0 on success, AR_MALFORMED if the special members are misplaced or
- *         duplicated, AR_IS_ERR_FMT if a member is not a valid ELF file.
+ * @return 0 on success, AR_MALFORMED_RET if the special members are misplaced
+ * or duplicated, AR_IS_ERR_FMT_RET if a member is not a valid ELF file.
  */
 int display_ar_file(mappedmem_t* mapped, char* file) {
     void* cur_addr = mapped->addr + SARMAG;
@@ -112,25 +119,28 @@ int display_ar_file(mappedmem_t* mapped, char* file) {
     bool saved_print_state = print_filename;
     print_filename = true;
 
-    while (retval != AR_MALFORMED &&
+    while (retval != AR_MALFORMED_RET &&
            cur_addr - mapped->addr < (long)(mapped->size)) {
         int type = _ar_is_hdr(ar_hdr(cur_addr));
         switch (type) {
-            case AR_IS_SYM_TAB:
+            case AR_IS_SYM_TAB_RET:
                 if (ar_sym_count++ || ar_str_count)
-                    retval = AR_MALFORMED;
+                    retval = AR_MALFORMED_RET;
                 break;
 
-            case AR_IS_STR_TAB:
+            case AR_IS_STR_TAB_RET:
                 if (ar_str_count++)
-                    retval = AR_MALFORMED;
+                    retval = AR_MALFORMED_RET;
                 long_name_table = (void*)(&ar_hdr(cur_addr)->ar_fmag) + 2;
                 break;
 
             default:
-                if (_display_ar_elf_segment(mapped, cur_addr - mapped->addr,
-                                            long_name_table) == AR_IS_ERR_FMT) {
-                    retval = AR_IS_ERR_FMT;
+                retval = _display_ar_elf_segment(
+                    mapped, cur_addr - mapped->addr, long_name_table);
+                if (retval == AR_IS_ERR_FMT_RET) {
+                    retval = AR_IS_ERR_FMT_RET;
+                } else if (retval == AR_MALFORMED_RET) {
+                    goto end;
                 }
                 break;
         }
@@ -138,6 +148,7 @@ int display_ar_file(mappedmem_t* mapped, char* file) {
         cur_addr += step;
     }
 
+end:
     print_filename = saved_print_state;
     return retval;
 }

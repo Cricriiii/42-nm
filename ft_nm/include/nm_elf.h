@@ -163,4 +163,9 @@ int get_symbol_type(void* addr, const elf_link_str_t* symbol_tab,
  *
  */
 
+/* Result of the ELF integrity checks. Printing is left to the caller. */
+#define ELF_OK 0
+#define ELF_ERR_NOT_RECOGNIZED -1
+#define ELF_ERR_NOT_IMPLEMENTED -2
+
 int is_elf_format(mappedmem_t* mapped);

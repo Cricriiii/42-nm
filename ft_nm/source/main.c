@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 11:03:36 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/02 12:04:06 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,22 +87,6 @@ static int mainloop(char** files) {
 }
 
 /**
- * @brief Constructor, run before main. Register the program name in the
- * allocation and print modules, initialize the resource collector and schedule
- * its destruction at exit.
- *
- * @param argc Unused.
- * @param argv Program arguments. Only argv[0] is read.
- */
-__attribute((constructor)) void init([[maybe_unused]] int argc, char** argv) {
-    set_symbol_locale(LC_ALL);
-    xmalloc_set_program_name(*argv);
-    print_set_program_name(*argv);
-    init_resource_collector();
-    atexit(destroy_resource_collector);
-}
-
-/**
  * @brief Parse the command line, then run the program main loop. File name
  * headers are enabled when more than one file is requested.
  *
@@ -127,4 +111,20 @@ int main(int argc, char** argv) {
 
     /* Program's core loop */
     return mainloop(options.files);
+}
+
+/**
+ * @brief Constructor, run before main. Register the program name in the
+ * allocation and print modules, initialize the resource collector and schedule
+ * its destruction at exit.
+ *
+ * @param argc Unused.
+ * @param argv Program arguments. Only argv[0] is read.
+ */
+__attribute((constructor)) void init([[maybe_unused]] int argc, char** argv) {
+    set_symbol_locale(LC_ALL);
+    xmalloc_set_program_name(*argv);
+    print_set_program_name(*argv);
+    init_resource_collector();
+    atexit(destroy_resource_collector);
 }
