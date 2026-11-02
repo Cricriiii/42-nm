@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/31 23:13:26 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 15:02:32 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/03 00:16:01 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,9 +15,6 @@
 
 #include "file_manip.h"
 
-#define AR_IS_ERR_FMT_RET -1
-#define AR_MALFORMED_RET -2
-#define AR_TRUNCATED_RET -3
 
 /* Archive symbol table. If present, must be the first. */
 #define AR_SYM_TAB "/               "
@@ -31,6 +28,12 @@
 /* Should be a name or /length */
 #define AR_REG_TAB_RET 2
 
+/* Archive errors */
+#define AR_IS_ERR_FMT_RET -1
+#define AR_MALFORMED_RET -2
+#define AR_TRUNCATED_RET -3
+
+/* Name member length */
 #define AR_NAME_LEN 16
 
 #define ar_is_signature(addr) !memcmp((addr), ARMAG, SARMAG)

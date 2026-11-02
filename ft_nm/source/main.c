@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 12:04:06 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/03 00:12:21 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,14 +67,15 @@ static int mainloop(char** files) {
         /* Release file descriptor, only keep the mapped memory */
         del_fd_resource(file_fd);
 
-        /* Display ELF symbols. Like nm, the status reports a failure on any of
-         * the files, not only the last one */
+        /* Display ELF symbols */
         int status;
         if (mapped.size >= SARMAG && ar_is_signature(mapped.addr)) {
             status = display_ar_file(&mapped, *file);
         } else {
             status = display_elf_file(&mapped, *file);
         }
+
+        /* Output an error code if at least one error */
         if (status != 0) {
             retval = 1;
         }
