@@ -39,7 +39,7 @@ DEFAULT_DIRS=(/lib64)
 # ---------------------------------------------------------------------------- #
 
 # Split the arguments: nm options before "--", directories after
-opts=()
+opts=()t_
 while [ $# -gt 0 ] && [ "$1" != "--" ]; do
     opts+=("$1")
     shift
