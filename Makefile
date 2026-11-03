@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/03 14:47:41 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 15:40:08 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,6 @@ COMPOSE		:= $(shell docker compose version > /dev/null 2>&1 && echo "docker comp
 endif
 COMPOSE_CMD	:= $(COMPOSE)
 
-
 # ---------------------------------------------------------------------------- #
 # compile                                                                      #
 # ---------------------------------------------------------------------------- #
@@ -33,10 +32,6 @@ IMAGE_TAG		+= $(PROGRAM)_$(VERSION)
 
 WORKSPACE_LOCAL	+= $(CURDIR)/$(PROGRAM)
 WORKSPACE_DOCK	+= /$(PROGRAM)
-
-TEST_DIR		:= $(CURDIR)/.test
-
-SCRIPTS_DIR		:= $(CURDIR)/scripts
 
 TARGET			?= dev
 
@@ -74,60 +69,64 @@ re:
 lre:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) re
 
-
 # ---------------------------------------------------------------------------- #
 # doxygen                                                                      #
 # ---------------------------------------------------------------------------- #
 
+# Doc target variable
+T_DOC	= +$(MAKE) -C $(WORKSPACE_LOCAL) $@
+
 ## Generate the Doxygen documentation (local workspace)
 doc:
-	+$(MAKE) -C $(WORKSPACE_LOCAL) doc
+	$(T_DOC)
 
 ## Open documentation in web browser (local workspace)
 docopen:
-	+$(MAKE) -C $(WORKSPACE_LOCAL) docopen
+	$(T_DOC)
 
 ## Delete the generated documentation (local workspace)
 docclean:
-	+$(MAKE) -C $(WORKSPACE_LOCAL) docclean
+	$(T_DOC)
 
 ## Recreate documentation (local workspace)
 docre:
-	+$(MAKE) -C $(WORKSPACE_LOCAL) docre
+	$(T_DOC)
 
 ## Display Doxygen configuration (local workspace)
 docconf:
-	+$(MAKE) -C $(WORKSPACE_LOCAL) docconf
+	$(T_DOC)
 
 ## Display Doxygen help (local workspace)
 dochelp:
-	+$(MAKE) -C $(WORKSPACE_LOCAL) dochelp
-
+	$(T_DOC)
 
 # ---------------------------------------------------------------------------- #
 # test                                                                         #
 # ---------------------------------------------------------------------------- #
 
-## Compare ft_nm and nm output on all T_PROG at once
+# T_ARGS reaches the sub-make by itself. T_PROG is made absolute, since the
+# sub-make runs from the local workspace.
+T_DELEGATE	= +$(MAKE) -C $(WORKSPACE_LOCAL) $@ T_PROG="$(abspath $(T_PROG))"
+
+## Compare ft_nm and nm output on all T_PROG at once (local workspace)
 test_all:
-	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
-			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) $(T_PROG)
+	$(T_DELEGATE)
 
-## Same as test_all, plus a Valgrind check per file (leaks, fds)
+## Same as test_all, plus a Valgrind check of ft_nm (local workspace)
 test_all_valgrind:
-	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
-			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) $(T_PROG)
+	$(T_DELEGATE)
 
-## Like test_all, but one file at a time (per-file verdict)
+## Like test_all, but one file at a time (local workspace)
 test_each:
-	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
-			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
+	$(T_DELEGATE)
 
-
-## Like test_each, plus Valgrind checks per file (leaks, fds)
+## Like test_each, plus Valgrind checks per file (local workspace)
 test_each_valgrind:
-	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
-			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
+	$(T_DELEGATE)
+
+## Delete the test output files (local workspace)
+test_clean:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) test_clean
 
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
@@ -139,8 +138,8 @@ clean:
 
 ## Clean objects, binary and test files
 fclean:
-	@rm -rf $(TEST_DIR)
 	+$(MAKE) lfclean
+	+$(MAKE) test_clean
 
 ## Reset all
 reset:
@@ -157,8 +156,6 @@ lfclean:
 ## Reset the local workspace (clean objects and documentation)
 lreset:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) reset
-
-
 
 # ---------------------------------------------------------------------------- #
 # misc                                                                         #
@@ -194,13 +191,15 @@ help:
 		docre \
 		docconf \
 		dochelp \
-		test \
-		test_valgrind \
+		test_all \
+		test_all_valgrind \
 		test_each \
 		test_each_valgrind \
+		test_clean \
 		clean \
 		lclean \
 		fclean \
+		reset \
 		lfclean \
 		lreset \
 		format \

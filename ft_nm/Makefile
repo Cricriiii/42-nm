@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/03 11:40:41 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 15:40:03 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -142,6 +142,39 @@ dochelp:
 
 
 # ---------------------------------------------------------------------------- #
+# test                                                                         #
+# ---------------------------------------------------------------------------- #
+
+TESTS_DIR	:= $(WORKSPACE)/tests
+TEST_DIR	:= $(WORKSPACE)/.test
+
+T_PROG		?=
+T_ARGS		?=
+
+TEST_ENV	:= TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE)/$(PROGRAM)
+
+## Compare ft_nm and nm output on all T_PROG at once
+test_all: $(PROGRAM)
+	@$(TEST_ENV) $(TESTS_DIR)/$@.sh $(T_ARGS) $(T_PROG)
+
+## Same as test_all, plus a Valgrind check of ft_nm (leaks, fds)
+test_all_valgrind: $(PROGRAM)
+	@$(TEST_ENV) $(TESTS_DIR)/$@.sh $(T_ARGS) $(T_PROG)
+
+## Like test_all, but one file at a time (per-file verdict)
+test_each: $(PROGRAM)
+	@$(TEST_ENV) $(TESTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
+
+## Like test_each, plus Valgrind checks per file (leaks, fds)
+test_each_valgrind: $(PROGRAM)
+	@$(TEST_ENV) $(TESTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
+
+## Delete the test output files
+test_clean:
+	@rm -rf $(TEST_DIR)
+
+
+# ---------------------------------------------------------------------------- #
 # clean                                                                        #
 # ---------------------------------------------------------------------------- #
 
@@ -154,10 +187,11 @@ fclean:
 	+$(MAKE) clean
 	@rm -f $(WORKSPACE)/$(PROGRAM) $(WORKSPACE)/$(PROGRAM32)
 
-## Same as fclean, plus delete documentation
+## Same as clean, plus delete documentation and test files
 reset:
 	+$(MAKE) clean
-	+$(MAKE) docclean	
+	+$(MAKE) docclean
+	+$(MAKE) test_clean
 
 
 # ---------------------------------------------------------------------------- #
@@ -192,6 +226,11 @@ help:
 		docre \
 		docconf \
 		dochelp \
+		test_all \
+		test_all_valgrind \
+		test_each \
+		test_each_valgrind \
+		test_clean \
 		clean \
 		fclean \
 		reset \
