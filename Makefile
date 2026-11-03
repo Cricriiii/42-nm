@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/03 11:39:53 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 14:47:41 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -35,6 +35,8 @@ WORKSPACE_LOCAL	+= $(CURDIR)/$(PROGRAM)
 WORKSPACE_DOCK	+= /$(PROGRAM)
 
 TEST_DIR		:= $(CURDIR)/.test
+
+SCRIPTS_DIR		:= $(CURDIR)/scripts
 
 TARGET			?= dev
 
@@ -106,103 +108,26 @@ dochelp:
 # test                                                                         #
 # ---------------------------------------------------------------------------- #
 
-T_PROG		?=
-T_ARGS		?=
-VALGRIND_	:= valgrind \
-				--quiet \
-				--leak-check=full \
-				--track-fds=yes \
-				--error-exitcode=42 \
-				--log-file=$(TEST_DIR)/valgrind.txt
-
 ## Compare ft_nm and nm output on all T_PROG at once
 test_all:
-	@mkdir -p $(TEST_DIR)
-	@nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt || true;
-	@$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt || true;
-	@if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
-		echo "diff OK"; \
-	else \
-		echo "diff FAIL"; \
-	fi; \
+	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
+			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) $(T_PROG)
 
 ## Same as test_all, plus a Valgrind check per file (leaks, fds)
 test_all_valgrind:
-	@mkdir -p $(TEST_DIR)
-	@nm $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_nm.txt || true;
-	@$(VALGRIND_) $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $(T_PROG) > $(TEST_DIR)/out_ft_nm.txt; \
-	ret=$$?; \
-	if [ $$ret -eq 42 ]; then \
-		echo "valgrind: FAIL (see $(TEST_DIR)/valgrind.txt)"; \
-	else \
-		echo "valgrind: OK"; \
-	fi; \
-	if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
-		echo "diff: OK"; \
-	else \
-		echo "diff: FAIL"; \
-	fi; \
+	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
+			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) $(T_PROG)
 
 ## Like test_all, but one file at a time (per-file verdict)
 test_each:
-	@mkdir -p $(TEST_DIR)
-	@for file in $(T_PROG); do \
-		if [ -d $$file ]; then \
-			continue; \
-		fi; \
-		echo "*************************************************************\n"; \
-		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt; \
-		ret_nm=$$?; \
-		$(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt; \
-		ret_ft_nm=$$?; \
-		echo; \
-		if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
-			echo "$$file: diff OK"; \
-		else \
-			echo "$$file: diff FAIL"; \
-		fi; \
-		if [ $$ret_nm -eq $$ret_ft_nm ]; then \
-			echo "$$file: return OK"; \
-		else \
-			echo "$$file: return FAIL"; \
-		fi; \
-		echo; \
-	done; \
-	echo "*************************************************************\n"
+	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
+			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
 
 
 ## Like test_each, plus Valgrind checks per file (leaks, fds)
 test_each_valgrind:
-	@mkdir -p $(TEST_DIR)
-	@for file in $(T_PROG); do \
-		if [ -d $$file ]; then \
-			continue; \
-		fi; \
-		echo "*************************************************************\n"; \
-		nm $(T_ARGS) $$file > $(TEST_DIR)/out_nm.txt; \
-		$(VALGRIND_) $(WORKSPACE_LOCAL)/$(PROGRAM) $(T_ARGS) $$file > $(TEST_DIR)/out_ft_nm.txt; \
-		ret_nm=$$?; \
-		ret_ft_nm=$$?; \
-		echo; \
-		if [ $$ret_ft_nm -eq 42 ]; then \
-			echo "\tvalgrind: FAIL (see $(TEST_DIR)/valgrind.txt)"; \
-		else \
-			echo "\tvalgrind: OK"; \
-		fi; \
-		if diff $(TEST_DIR)/out_nm.txt $(TEST_DIR)/out_ft_nm.txt > $(TEST_DIR)/diff_nm; then \
-			echo "\tdiff    : OK"; \
-		else \
-			echo "\tdiff    : FAIL"; \
-		fi; \
-		if [ $$ret_nm -eq $$ret_ft_nm ]; then \
-			echo "\treturn  : OK"; \
-		else \
-			echo "\treturn  : return FAIL"; \
-		fi; \
-		echo; \
-	done ; \
-	echo "*************************************************************\n"
-
+	@TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE_LOCAL)/$(PROGRAM) \
+			$(SCRIPTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
 
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
@@ -216,6 +141,10 @@ clean:
 fclean:
 	@rm -rf $(TEST_DIR)
 	+$(MAKE) lfclean
+
+## Reset all
+reset:
+	+$(MAKE) lreset
 
 ## Clean object files in the local workspace
 lclean:
