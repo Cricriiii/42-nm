@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:43 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/03 15:51:31 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 16:34:24 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,7 @@ ARG WORKSPACE="/${SOURCE}"
 ARG VERSION_TAG="1.0"
 
 # ---------------------------------------------------------------------------- #
-# development environment                                                      #
+# environment                                                                  #
 # ---------------------------------------------------------------------------- #
 FROM fedora:43 AS dev
 
@@ -42,16 +42,3 @@ RUN dnf install -y \
 WORKDIR ${WORKSPACE}
 
 CMD ["/bin/zsh"]
-
-
-# ---------------------------------------------------------------------------- #
-# production environment                                                       #
-# ---------------------------------------------------------------------------- #
-FROM fedora:43 AS prod
-
-ARG SOURCE
-ARG WORKSPACE
-
-COPY --from=dev ${WORKSPACE}/my_nm /usr/bin/my_nm
-
-CMD ["/bin/bash"]
