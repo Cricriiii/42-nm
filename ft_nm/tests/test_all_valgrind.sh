@@ -11,14 +11,15 @@
 #                                                                              #
 # **************************************************************************** #
 
-# Usage: FT_NM=<binary> [TEST_DIR=<dir>] \
+# Usage: FT_NM=<binary> [RESULTS_DIR=<dir>] \
 #            test_all_valgrind.sh [nm options] [files...]
 #
 # Same as test_all.sh, with ft_nm run under Valgrind (leaks, file descriptors).
 #
 # Environment:
 #   FT_NM       Path to the ft_nm binary (required)
-#   TEST_DIR    Directory of the output files (default: .test)
+#   RESULTS_DIR Directory of the result files (default: .test_results/, at
+#               the root of the project)
 
 set -uo pipefail
 
@@ -27,14 +28,14 @@ set -uo pipefail
 # ---------------------------------------------------------------------------- #
 
 : "${FT_NM:?FT_NM is not set}"
-: "${TEST_DIR:=.test}"
+: "${RESULTS_DIR:=$(dirname "$0")/../.test_results}"
 
-OUT_NM="$TEST_DIR/out_nm.txt"
-OUT_FT_NM="$TEST_DIR/out_ft_nm.txt"
-DIFF_NM="$TEST_DIR/diff_nm.txt"
+OUT_NM="$RESULTS_DIR/out_nm.txt"
+OUT_FT_NM="$RESULTS_DIR/out_ft_nm.txt"
+DIFF_NM="$RESULTS_DIR/diff_nm.txt"
 
 VALGRIND_ERR_CODE=42
-VALGRIND_LOG="$TEST_DIR/valgrind.txt"
+VALGRIND_LOG="$RESULTS_DIR/valgrind.txt"
 VALGRIND=(
     valgrind
     --quiet
@@ -96,7 +97,7 @@ print_result() {
 
 failures=0
 
-mkdir -p "$TEST_DIR"
+mkdir -p "$RESULTS_DIR"
 print_banner
 print_file_name "All files"
 
@@ -115,13 +116,13 @@ fi
 if diff "$OUT_NM" "$OUT_FT_NM" > "$DIFF_NM"; then
     print_result "diff" "OK"
 else
-    print_result "diff" "FAIL" "see $DIFF_NM"
+    print_result "diff" "FAIL"
 fi
 
 # Check the Valgrind report, then the exit codes: the real exit code of ft_nm
 # is hidden when Valgrind reports an error
 if [ "$ret_ft_nm" -eq "$VALGRIND_ERR_CODE" ]; then
-    print_result "valgrind" "FAIL" "see $VALGRIND_LOG"
+    print_result "valgrind" "FAIL"
 else
     print_result "valgrind" "OK"
     if [ "$ret_nm" -eq "$ret_ft_nm" ]; then

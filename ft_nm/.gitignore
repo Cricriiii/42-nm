@@ -21,7 +21,7 @@ logs/
 tmp/
 temp/
 .tmp/
-.test/
+.test_results/
 
 # ============================================================
 # Compilation

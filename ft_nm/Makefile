@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/03 15:40:03 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 16:32:01 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -146,12 +146,12 @@ dochelp:
 # ---------------------------------------------------------------------------- #
 
 TESTS_DIR	:= $(WORKSPACE)/tests
-TEST_DIR	:= $(WORKSPACE)/.test
+RESULTS_DIR	:= $(WORKSPACE)/.test_results
 
 T_PROG		?=
 T_ARGS		?=
 
-TEST_ENV	:= TEST_DIR=$(TEST_DIR) FT_NM=$(WORKSPACE)/$(PROGRAM)
+TEST_ENV	:= RESULTS_DIR=$(RESULTS_DIR) FT_NM=$(WORKSPACE)/$(PROGRAM)
 
 ## Compare ft_nm and nm output on all T_PROG at once
 test_all: $(PROGRAM)
@@ -171,7 +171,7 @@ test_each_valgrind: $(PROGRAM)
 
 ## Delete the test output files
 test_clean:
-	@rm -rf $(TEST_DIR)
+	@rm -rf $(RESULTS_DIR)
 
 
 # ---------------------------------------------------------------------------- #
@@ -189,7 +189,7 @@ fclean:
 
 ## Same as clean, plus delete documentation and test files
 reset:
-	+$(MAKE) clean
+	+$(MAKE) fclean
 	+$(MAKE) docclean
 	+$(MAKE) test_clean
 
@@ -220,6 +220,7 @@ help:
 .PHONY: all \
 		x86 \
 		re \
+		prof \
 		doc \
 		docopen \
 		docclean \

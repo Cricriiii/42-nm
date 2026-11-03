@@ -11,14 +11,16 @@
 #                                                                              #
 # **************************************************************************** #
 
-# Usage: FT_NM=<binary> [TEST_DIR=<dir>] test_each.sh [nm options] -- files...
+# Usage: FT_NM=<binary> [RESULTS_DIR=<dir>] \
+#            test_each.sh [nm options] -- files...
 #
 # Compare the output and the exit status of nm and ft_nm, one file at a time.
 # Directories are skipped.
 #
 # Environment:
 #   FT_NM       Path to the ft_nm binary (required)
-#   TEST_DIR    Directory of the output files (default: .test)
+#   RESULTS_DIR Directory of the result files (default: .test_results/, at
+#               the root of the project)
 
 set -uo pipefail
 
@@ -27,11 +29,11 @@ set -uo pipefail
 # ---------------------------------------------------------------------------- #
 
 : "${FT_NM:?FT_NM is not set}"
-: "${TEST_DIR:=.test}"
+: "${RESULTS_DIR:=$(dirname "$0")/../.test_results}"
 
-OUT_NM="$TEST_DIR/out_nm.txt"
-OUT_FT_NM="$TEST_DIR/out_ft_nm.txt"
-DIFF_NM="$TEST_DIR/diff_nm.txt"
+OUT_NM="$RESULTS_DIR/out_nm.txt"
+OUT_FT_NM="$RESULTS_DIR/out_ft_nm.txt"
+DIFF_NM="$RESULTS_DIR/diff_nm.txt"
 
 # ---------------------------------------------------------------------------- #
 # display                                                                      #
@@ -106,7 +108,7 @@ shift   # drop the "--"
 
 failures=0
 
-mkdir -p "$TEST_DIR"
+mkdir -p "$RESULTS_DIR"
 print_banner
 
 for file in "$@"; do
@@ -123,15 +125,14 @@ for file in "$@"; do
 
     # Add a newline after the error messages of nm and ft_nm, if any
     if [ "$ret_nm" -ne 0 ] || [ "$ret_ft_nm" -ne 0 ]; then
-        print_separator
-        continue
+        echo
     fi
 
     # Compare both outputs
     if diff "$OUT_NM" "$OUT_FT_NM" > "$DIFF_NM"; then
         print_result "diff" "OK"
     else
-        print_result "diff" "FAIL" "see $DIFF_NM"
+        print_result "diff" "FAIL"
     fi
 
     # Compare both exit codes

@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:43 by cgajean           #+#    #+#              #
-#    Updated: 2026/10/21 17:44:44 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 15:51:31 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -28,6 +28,7 @@ RUN dnf install -y \
         glibc-static.i686 \
         make \
         valgrind \
+        diffutils \
         binutils \
         elfutils \
         patchelf \
