@@ -80,6 +80,26 @@ print_result() {
     fi
 }
 
+
+# ---------------------------------------------------------------------------- #
+# tool                                                                         #
+# ---------------------------------------------------------------------------- #
+
+del_bfd_plugin() {
+    local source=$1
+    local tmp_file
+
+    if ! tmp_file="$(mktemp)"; then
+        echo "$0: del_bfd_plugin: cannot create temporary file" 1>&2
+        exit 1
+    fi
+
+    cat "$source" | grep -v "bfd plugin" > "$tmp_file"
+    cat "$tmp_file" > "$source"
+    rm -f "$tmp_file"
+}
+
+
 # ---------------------------------------------------------------------------- #
 # main                                                                         #
 # ---------------------------------------------------------------------------- #
@@ -91,8 +111,11 @@ print_banner
 print_file_name "All files"
 
 # Execute both commands
-nm "$@" > "$OUT_NM"
+nm "$@" 2>&1 > "$OUT_NM"
 ret_nm=$?
+
+del_bfd_plugin "$OUT_NM"
+
 "$FT_NM" "$@" > "$OUT_FT_NM"
 ret_ft_nm=$?
 

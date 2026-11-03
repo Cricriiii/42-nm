@@ -28,6 +28,7 @@ temp
 .test
 .tests
 cmd
+.correction
 
 # ============================================================
 # Compilation

@@ -93,6 +93,24 @@ print_result() {
 }
 
 # ---------------------------------------------------------------------------- #
+# tool                                                                         #
+# ---------------------------------------------------------------------------- #
+
+del_bfd_plugin() {
+    local source=$1
+    local tmp_file
+
+    if ! tmp_file="$(mktemp)"; then
+        echo "$0: del_bfd_plugin: cannot create temporary file" 1>&2
+        exit 1
+    fi
+
+    cat "$source" | grep -v "bfd plugin" > "$tmp_file"
+    cat "$tmp_file" > "$source"
+    rm -f "$tmp_file"
+}
+
+# ---------------------------------------------------------------------------- #
 # arguments                                                                    #
 # ---------------------------------------------------------------------------- #
 
@@ -131,13 +149,32 @@ for file in "$@"; do
     # Execute both commands
     nm "${opts[@]}" "$file" > "$OUT_NM"
     ret_nm=$?
+
+    del_bfd_plugin "$OUT_NM"
+
     "${VALGRIND[@]}" "$FT_NM" "${opts[@]}" "$file" > "$OUT_FT_NM"
     ret_ft_nm=$?
 
-    # Add a newline after the error messages of nm and ft_nm, if any
+    valgrind_failed=0
+    
+    # Test if nm or ft_nm returned an error
     if [ "$ret_nm" -ne 0 ] || [ "$ret_ft_nm" -ne 0 ]; then
+        #Check if Valgrind crashed due to a malformed ELF file
+        if grep -q "I can't recover" "$VALGRIND_LOG"; then
+            echo "valgrind:" "${file}: file is malformed. Skipping"
+            valgrind_failed=1
+        fi
         echo
     fi
+
+    # Valgrind exits on malformed ELF files
+    if [ "$valgrind_failed" -eq 1 ]; then
+        print_result "diff" "SKIP"
+        print_result "valgrind" "SKIP"
+        print_result "return" "SKIP"
+        print_separator
+        continue
+    fi    
 
     # Compare both outputs
     if diff "$OUT_NM" "$OUT_FT_NM" > "$DIFF_NM"; then
@@ -148,6 +185,7 @@ for file in "$@"; do
 
     # Check the Valgrind report, then the exit codes: the real exit code of
     # ft_nm is hidden when Valgrind reports an error
+
     if [ "$ret_ft_nm" -eq "$VALGRIND_ERR_CODE" ]; then
         print_result "valgrind" "FAIL"
     else

@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/03 16:32:01 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 20:11:28 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -148,8 +148,10 @@ dochelp:
 TESTS_DIR	:= $(WORKSPACE)/tests
 RESULTS_DIR	:= $(WORKSPACE)/.test_results
 
-T_PROG		?=
 T_ARGS		?=
+T_PROG		?=
+# Newlines (e.g. from `find`) would split the recipe into separate commands
+override T_PROG	:= $(strip $(T_PROG))
 
 TEST_ENV	:= RESULTS_DIR=$(RESULTS_DIR) FT_NM=$(WORKSPACE)/$(PROGRAM)
 
@@ -173,6 +175,13 @@ test_each_valgrind: $(PROGRAM)
 test_clean:
 	@rm -rf $(RESULTS_DIR)
 
+## Like test_each, on the non stripped files of T_PROG dirs (default: /lib64)
+test_non_stripped: $(PROGRAM)
+	@$(TEST_ENV) $(TESTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
+
+## Like test_non_stripped, plus Valgrind checks per file (leaks, fds)
+test_non_stripped_valgrind: $(PROGRAM)
+	@$(TEST_ENV) $(TESTS_DIR)/$@.sh $(T_ARGS) -- $(T_PROG)
 
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
@@ -231,6 +240,8 @@ help:
 		test_all_valgrind \
 		test_each \
 		test_each_valgrind \
+		test_non_stripped \
+		test_non_stripped_valgrind \
 		test_clean \
 		clean \
 		fclean \

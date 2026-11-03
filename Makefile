@@ -124,6 +124,14 @@ test_each:
 test_each_valgrind:
 	$(T_DELEGATE)
 
+## Like test_each, on the non stripped files of T_PROG dirs (local workspace)
+test_non_stripped:
+	$(T_DELEGATE)
+
+## Like test_non_stripped, plus Valgrind checks per file (local workspace)
+test_non_stripped_valgrind:
+	$(T_DELEGATE)
+
 ## Delete the test output files (local workspace)
 test_clean:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) test_clean
@@ -195,6 +203,8 @@ help:
 		test_all_valgrind \
 		test_each \
 		test_each_valgrind \
+		test_non_stripped \
+		test_non_stripped_valgrind \
 		test_clean \
 		clean \
 		lclean \

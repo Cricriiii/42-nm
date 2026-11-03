@@ -92,6 +92,24 @@ print_result() {
 }
 
 # ---------------------------------------------------------------------------- #
+# tool                                                                         #
+# ---------------------------------------------------------------------------- #
+
+del_bfd_plugin() {
+    local source=$1
+    local tmp_file
+
+    if ! tmp_file="$(mktemp)"; then
+        echo "$0: del_bfd_plugin: cannot create temporary file" 1>&2
+        exit 1
+    fi
+
+    cat "$source" | grep -v "bfd plugin" > "$tmp_file"
+    cat "$tmp_file" > "$source"
+    rm -f "$tmp_file"
+}
+
+# ---------------------------------------------------------------------------- #
 # main                                                                         #
 # ---------------------------------------------------------------------------- #
 
@@ -104,12 +122,32 @@ print_file_name "All files"
 # Execute both commands
 nm "$@" > "$OUT_NM"
 ret_nm=$?
+
+del_bfd_plugin "$OUT_NM"
+
 "${VALGRIND[@]}" "$FT_NM" "$@" > "$OUT_FT_NM"
 ret_ft_nm=$?
 
-# Add a newline after the error messages of nm and ft_nm, if any
+valgrind_failed=0
+
+# Test if nm or ft_nm returned an error
 if [ "$ret_nm" -ne 0 ] || [ "$ret_ft_nm" -ne 0 ]; then
+    # Check if Valgrind crashed due to a malformed ELF file
+    if grep -q "I can't recover" "$VALGRIND_LOG"; then
+        echo "valgrind: one of the files is malformed. Skipping"
+        valgrind_failed=1
+    fi
     echo
+fi
+
+# Valgrind exits on malformed ELF files: as all the files are tested at once,
+# none of the checks can be trusted
+if [ "$valgrind_failed" -eq 1 ]; then
+    print_result "diff" "SKIP"
+    print_result "valgrind" "SKIP"
+    print_result "return" "SKIP"
+    print_separator
+    exit 0
 fi
 
 # Compare both outputs
