@@ -10,16 +10,25 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file file_manip.h
+ * @brief Opening and read-only memory mapping of the input files.
+ */
+
 #pragma once
 
 #include <stddef.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-/* Memory mapped region: start address and size in bytes */
+/**
+ * @brief Read-only memory mapping of a whole file.
+ *
+ * Filled by map_file(), released by the caller with munmap().
+ */
 typedef struct mappedmem {
-    void* addr;
-    size_t size;
+    void* addr;  /**< Start address of the mapping. */
+    size_t size; /**< Size of the mapping in bytes. */
 } mappedmem_t;
 
 int open_file(const char* filename);

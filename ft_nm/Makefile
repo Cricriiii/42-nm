@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 17:47:50 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/02 19:20:37 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 11:40:41 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -98,6 +98,48 @@ re:
 	+$(MAKE) fclean
 	+$(MAKE) all
 
+# ---------------------------------------------------------------------------- #
+# doxygen                                                                      #
+# ---------------------------------------------------------------------------- #
+
+## Generate the Doxygen documentation in .docs/html (fails on any warning)
+doc:
+	@doxygen Doxyfile; \
+	if [ $$? -eq 0 ]; then \
+		echo "Documentation created. See in $(WORKSPACE)/.docs"; \
+	else \
+		echo "Documentation creation failed"; \
+	fi
+
+## Open documentation in web browser
+docopen:
+	@if [ ! -d $(WORKSPACE)/.docs ]; then \
+		make doc; \
+	fi; \
+	xdg-open .docs/html/index.html > /dev/null 2>&1; \
+	if [ $$? -ne 0 ]; then \
+		echo "Documentation can't be opened. Try fixing it."; \
+	else \
+		echo "Documentation is opened, check your web browser."; \
+	fi
+
+## Delete the generated documentation
+docclean:
+	@rm -rf $(WORKSPACE)/.docs
+
+## Recreate documentation
+docre:
+	@+$(MAKE) docclean
+	@+$(MAKE) doc
+
+## Display Doxygen configutation
+docconf:
+	@doxygen -x Doxyfile
+
+## Display Doxygen help
+dochelp:
+	@doxygen -g - | less
+
 
 # ---------------------------------------------------------------------------- #
 # clean                                                                        #
@@ -111,6 +153,12 @@ clean:
 fclean:
 	+$(MAKE) clean
 	@rm -f $(WORKSPACE)/$(PROGRAM) $(WORKSPACE)/$(PROGRAM32)
+
+## Same as fclean, plus delete documentation
+reset:
+	+$(MAKE) clean
+	+$(MAKE) docclean	
+
 
 # ---------------------------------------------------------------------------- #
 # misc                                                                         #
@@ -135,4 +183,17 @@ help:
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
 	@echo
 
-.PHONY: all x86 re clean fclean format help
+.PHONY: all \
+		x86 \
+		re \
+		doc \
+		docopen \
+		docclean \
+		docre \
+		docconf \
+		dochelp \
+		clean \
+		fclean \
+		reset \
+		format \
+		help

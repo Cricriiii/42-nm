@@ -6,7 +6,7 @@
 #    By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/10/09 18:35:42 by cgajean           #+#    #+#              #
-#    Updated: 2026/11/02 16:50:21 by cgajean          ###   ########.fr        #
+#    Updated: 2026/11/03 11:39:53 by cgajean          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -71,6 +71,35 @@ re:
 ## Rebuild in the local workspace
 lre:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) re
+
+
+# ---------------------------------------------------------------------------- #
+# doxygen                                                                      #
+# ---------------------------------------------------------------------------- #
+
+## Generate the Doxygen documentation (local workspace)
+doc:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) doc
+
+## Open documentation in web browser (local workspace)
+docopen:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) docopen
+
+## Delete the generated documentation (local workspace)
+docclean:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) docclean
+
+## Recreate documentation (local workspace)
+docre:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) docre
+
+## Display Doxygen configuration (local workspace)
+docconf:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) docconf
+
+## Display Doxygen help (local workspace)
+dochelp:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) dochelp
 
 
 # ---------------------------------------------------------------------------- #
@@ -188,7 +217,6 @@ fclean:
 	@rm -rf $(TEST_DIR)
 	+$(MAKE) lfclean
 
-
 ## Clean object files in the local workspace
 lclean:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) clean
@@ -197,8 +225,10 @@ lclean:
 lfclean:
 	+$(MAKE) -C $(WORKSPACE_LOCAL) fclean
 
-## Reset the dockerized environment (TODO)
-reset:
+## Reset the local workspace (clean objects and documentation)
+lreset:
+	+$(MAKE) -C $(WORKSPACE_LOCAL) reset
+
 
 
 # ---------------------------------------------------------------------------- #
@@ -224,4 +254,25 @@ help:
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
 	@echo
 
-.PHONY: all run local re lre test test_valgrind test_each test_each_valgrind clean lclean fclean lfclean reset lreset format help
+.PHONY: all \
+		run \
+		local \
+		re \
+		lre \
+		doc \
+		docopen \
+		docclean \
+		docre \
+		docconf \
+		dochelp \
+		test \
+		test_valgrind \
+		test_each \
+		test_each_valgrind \
+		clean \
+		lclean \
+		fclean \
+		lfclean \
+		lreset \
+		format \
+		help

@@ -10,6 +10,12 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file type_deduction.c
+ * @brief Deduction of the letter nm displays for a symbol, and of its
+ * undefined and external attributes.
+ */
+
 #include <ctype.h>
 #include <stddef.h>
 #include <string.h>
@@ -21,8 +27,10 @@ extern int arch_global;
 /**
  * @brief Check if a symbol is undefined.
  *
- * @param st_shndx ElfN_Sym member. Section header table index of the symbol.
- * @return int. 1 if true, 0 if false.
+ * @param[in] st_shndx ElfN_Sym::st_shndx. Section header table index of the
+ * symbol.
+ * @retval 1 The symbol is undefined (@c SHN_UNDEF).
+ * @retval 0 It is not.
  */
 int is_undef(ElfN_Section st_shndx) {
     return st_shndx == SHN_UNDEF;
@@ -32,9 +40,12 @@ int is_undef(ElfN_Section st_shndx) {
  * @brief Check if a symbol is external. Global, weak and unique symbols are
  * external, as well as undefined and common ones.
  *
- * @param st_shndx ElfN_Sym member. Section header table index of the symbol.
- * @param st_info ElfN_Sym member. Type and binding attributes of the symbol.
- * @return int. 1 if true, 0 if false.
+ * @param[in] st_shndx ElfN_Sym::st_shndx. Section header table index of the
+ * symbol.
+ * @param[in] st_info ElfN_Sym::st_info. Type and binding attributes of the
+ * symbol.
+ * @retval 1 The symbol is external.
+ * @retval 0 It is local.
  */
 int is_external(ElfN_Section st_shndx, unsigned char st_info) {
     unsigned char binding = ELF64_ST_BIND(st_info);
@@ -48,9 +59,10 @@ int is_external(ElfN_Section st_shndx, unsigned char st_info) {
  * @brief Check if a section holds debugging information. A section loaded in
  * memory never does.
  *
- * @param section_flag Section header member sh_flags.
- * @param name Name of the section.
- * @return int. 1 if true, 0 if false.
+ * @param[in] section_flag ElfN_Shdr::sh_flags of the section.
+ * @param[in] name Name of the section.
+ * @retval 1 The section holds debugging information.
+ * @retval 0 It does not.
  */
 int is_debug_section(ElfN_Xword section_flag, const char* name) {
     if (section_flag & SHF_ALLOC) {
@@ -65,13 +77,14 @@ int is_debug_section(ElfN_Xword section_flag, const char* name) {
 }
 
 /**
- * @brief Deduce the symbol letter from the flags and type of its section. Used
- * when the section name is not recognized.
+ * @brief Deduce the lowercase symbol letter from the flags and type of its
+ * section.
  *
- * @param section_flag Section header member sh_flags.
- * @param section_type Section header member sh_type.
- * @param name Name of the section.
- * @return int. Letter as displayed by nm, '?' if it cannot be determined.
+ * @param[in] section_flag ElfN_Shdr::sh_flags of the section.
+ * @param[in] section_type ElfN_Shdr::sh_type of the section.
+ * @param[in] name Name of the section.
+ * @return Letter as displayed by nm for a local symbol: @c 't', @c 'r',
+ * @c 'd', @c 'b', @c 'N' or @c 'n', @c '?' if it cannot be determined.
  */
 static int section_type_from_flags(ElfN_Xword section_flag,
                                    ElfN_Word section_type, const char* name) {
@@ -100,12 +113,17 @@ static int section_type_from_flags(ElfN_Xword section_flag,
  * @brief Deduce the letter displayed by nm for a symbol. The letter is
  * uppercase for global symbols and lowercase for local ones.
  *
- * @param addr Address of the start of the ELF file.
- * @param size Size of the file in bytes.
- * @param symbol_tab Section name string table of the file.
- * @param shnum Number of section headers of the file.
- * @param s Symbol to deduce the letter for.
- * @return int. Letter as displayed by nm.
+ * Special indexes and bindings are handled first (@c 'C', @c 'U', @c 'w',
+ * @c 'v', @c 'i', @c 'W', @c 'V', @c 'u', @c 'a'), then the letter is
+ * deduced from the section of the symbol (see section_type_from_flags()).
+ *
+ * @param[in] addr Address of the start of the ELF file.
+ * @param[in] size Size of the file in bytes.
+ * @param[in] symbol_tab Section name string table of the file.
+ * @param[in] shnum Number of section headers of the file.
+ * @param[in] s Symbol to deduce the letter for.
+ * @return Letter as displayed by nm, @c '?' if it cannot be determined.
+ * @pre #arch_global is set.
  */
 int get_symbol_type(void* addr, size_t size, const elf_link_str_t* symbol_tab,
                     size_t shnum, const ElfN_Sym* s) {

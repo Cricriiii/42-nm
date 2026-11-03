@@ -10,6 +10,13 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file xalloc.h
+ * @brief Allocation wrappers that exit the program on failure.
+ *
+ * They never return @c nullptr, so their result needs no check.
+ */
+
 #pragma once
 
 #include <stddef.h>

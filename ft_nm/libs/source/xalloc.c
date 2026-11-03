@@ -6,9 +6,14 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/17 14:34:54 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/20 22:41:42 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/03 10:35:41 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+/**
+ * @file xalloc.c
+ * @brief Implementation of the allocation wrappers.
+ */
 
 #include "xalloc.h"
 
@@ -17,17 +22,17 @@
 #include <stdlib.h>
 
 /**
- * @brief Global static variables.
+ * @brief Name displayed in the out of memory message.
  *
- * @param program_name Name displayed in the out of memory message.
- *
+ * Set by xmalloc_set_program_name(). Not copied.
  */
 static char* program_name;
 
 /**
  * @brief Let user modules register the global program name.
  *
- * @param pname Program name.
+ * @param[in] pname Program name. Not copied, it must outlive the module.
+ * @pre Must be called before any allocation can fail (see xmalloc_failed()).
  */
 void xmalloc_set_program_name(const char* pname) {
     program_name = (char*)pname;
@@ -37,8 +42,8 @@ void xmalloc_set_program_name(const char* pname) {
  * @brief Malloc function wrapper. Minimum size adjusted to 1. Print error
  * message and exit if fails.
  *
- * @param size Size to be allocated.
- * @return void* Pointer to the new memory allocation.
+ * @param[in] size Size to be allocated.
+ * @return Pointer to the new memory allocation, never @c nullptr.
  */
 void* xmalloc(size_t size) {
     if (!size) {
@@ -57,9 +62,10 @@ void* xmalloc(size_t size) {
  * @brief Calloc function wrapper. Minimum size adjusted to 1. Print error
  * message and exit if fails, or in case of size_t overflow.
  *
- * @param nmemb Number of elements to allocate.
- * @param size Size of each element.
- * @return void* Pointer to the new initialized memory allocation.
+ * @param[in] nmemb Number of elements to allocate.
+ * @param[in] size Size of each element.
+ * @return Pointer to the new zero-initialized memory allocation, never
+ * @c nullptr.
  */
 void* xcalloc(size_t nmemb, size_t size) {
     if (!nmemb || !size) {
@@ -84,9 +90,10 @@ void* xcalloc(size_t nmemb, size_t size) {
  * @brief Realloc function wrapper. Use malloc if source memory is null, realloc
  * otherwise. Print error message and exit if allocation fails.
  *
- * @param old_memory Source memory.
- * @param size New memory size.
- * @return void* Pointer to the new non-initialized memory allocation.
+ * @param[in] old_memory Source memory, or @c nullptr. Invalid after the call.
+ * @param[in] size New memory size.
+ * @return Pointer to the new allocation, never @c nullptr. The bytes past the
+ * old size are not initialized.
  */
 void* xrealloc(void* old_memory, size_t size) {
     if (!size) {
@@ -111,7 +118,8 @@ void* xrealloc(void* old_memory, size_t size) {
  * @brief Print out an error message and exit in case of memory allocation
  * failure.
  *
- * @param size Size of the failed memory allocation.
+ * @param[in] size Size of the failed memory allocation.
+ * @note Does not return: exits with @c EXIT_FAILURE.
  */
 void xmalloc_failed(size_t size) {
     fprintf(stderr, "\n%s%sout of memory allocating %lu bytes\n", program_name,

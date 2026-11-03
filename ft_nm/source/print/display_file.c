@@ -10,6 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file display_file.c
+ * @brief Display of the symbols of a single ELF file.
+ */
+
 #include "nm_ar.h"
 #include "nm_elf.h"
 #include "print.h"
@@ -21,12 +26,13 @@ extern bool print_filename;
  * @brief Read the symbols of a mapped ELF file and display them, preceded by
  * the file name when several files are requested.
  *
- * The format is checked first: this is the only place where a format error
- * reported by is_elf_format() is printed.
+ * The format is checked first, and a format error reported by is_elf_format()
+ * is printed on stderr.
  *
- * @param mapped Memory mapping of the ELF file.
- * @param file Name displayed in the header, if any.
- * @return int. 0 on success, 1 if the file format is rejected.
+ * @param[in] mapped Memory mapping of the ELF file.
+ * @param[in] file Name displayed in the header, if any.
+ * @retval 0 Success.
+ * @retval 1 The file format is rejected.
  */
 int display_elf_file(mappedmem_t* mapped, char* file) {
     /* Verify file format */

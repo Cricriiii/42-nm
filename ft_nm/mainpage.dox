@@ -1,0 +1,37 @@
+/**
+ * @mainpage ft_nm
+ *
+ * A C implementation of the @c nm command: list the symbols of ELF files
+ * (32 and 64 bits, little endian) and of ar archives.
+ *
+ * @section usage Usage
+ *
+ * @code
+ * ./ft_nm [-a] [-g] [-p] [-r] [-u] [-h] [file...]
+ * @endcode
+ *
+ * Without file, @c a.out is read. See nm_args for the options.
+ *
+ * @section flow Program flow
+ *
+ * -# init() runs before main(): registers the program name and starts the
+ *    resource collector.
+ * -# get_options() parses the command line into #options.
+ * -# mainloop() opens and maps each file (file_manip.h), then hands it to
+ *    display_ar_file() or display_elf_file().
+ * -# is_elf_format() checks the file, read_elfN() extracts the symbols and
+ *    get_symbol_type() deduces their letter.
+ * -# print_symbols() sorts, filters and prints them.
+ *
+ * @section modules Modules
+ *
+ * | Header               | Role                                        |
+ * |----------------------|---------------------------------------------|
+ * | nm_elf.h             | ELF types, checks and symbol extraction     |
+ * | nm_ar.h              | ar archive constants and helpers            |
+ * | print.h              | Symbol output and error messages            |
+ * | options.h            | Command line options                        |
+ * | file_manip.h         | Opening and mapping of the input files      |
+ * | resource_collector.h | Release of all resources at exit            |
+ * | xalloc.h             | Allocation wrappers that exit on failure    |
+ */

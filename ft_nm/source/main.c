@@ -6,9 +6,15 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/03 00:12:21 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/03 10:23:03 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+/**
+ * @file main.c
+ * @brief Entry point of ft_nm: initialization, option parsing and the loop
+ * over the requested files.
+ */
 
 #include <errno.h>
 #include <locale.h>
@@ -24,22 +30,24 @@
 #include "resource_collector.h"
 #include "xalloc.h"
 
-/**
- * @brief Global program variables.
- *
- * @param options Parsed command line arguments.
- * @param print_filename Set when several files are requested, so that each
- * symbol list is preceded by its file name.
- */
+/** @brief Parsed command line options, filled by get_options(). */
 nm_args_t options = {};
+
+/**
+ * @brief Set when several files are requested, so that each symbol list is
+ * preceded by its file name.
+ */
 bool print_filename = false;
 
 /**
  * @brief Program's core loop. Sequentially open, map and display each requested
  * file.
  *
- * @param files Array of file paths.
- * @return int. 0 if every file was processed, 1 if at least one failed.
+ * Errors are reported on stderr and the loop goes on with the next file.
+ *
+ * @param[in] files Null terminated array of file paths.
+ * @retval 0 Every file was processed.
+ * @retval 1 At least one file failed.
  */
 static int mainloop(char** files) {
     int retval = 0;
@@ -90,9 +98,11 @@ static int mainloop(char** files) {
  * @brief Parse the command line, then run the program main loop. File name
  * headers are enabled when more than one file is requested.
  *
- * @param argc Number of command line arguments.
- * @param argv Command line arguments.
- * @return int. 0 if every file was processed, 1 if at least one failed.
+ * @param[in] argc Number of command line arguments.
+ * @param[in] argv Command line arguments.
+ * @retval 0 Every file was processed.
+ * @retval 1 At least one file failed, or the command line is invalid.
+ * @pre init() has run (it is a constructor).
  */
 int main(int argc, char** argv) {
     /* Parse the command line arguments */
@@ -114,12 +124,12 @@ int main(int argc, char** argv) {
 }
 
 /**
- * @brief Constructor, run before main. Register the program name in the
+ * @brief Constructor, run before main(). Register the program name in the
  * allocation and print modules, initialize the resource collector and schedule
  * its destruction at exit.
  *
- * @param argc Unused.
- * @param argv Program arguments. Only argv[0] is read.
+ * @param[in] argc Unused.
+ * @param[in] argv Program arguments. Only @c argv[0] is read.
  */
 __attribute((constructor)) void init([[maybe_unused]] int argc, char** argv) {
     set_symbol_locale(LC_ALL);

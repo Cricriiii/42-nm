@@ -10,6 +10,16 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file nm_elf.h
+ * @brief ELF reading: architecture-independent types, integrity checks,
+ * symbol extraction and type deduction.
+ *
+ * 32-bit and 64-bit files are handled through a single set of generic
+ * structures (@c ElfN_*), laid out like their 64-bit counterparts. The
+ * @c *_to_generic() functions widen 32-bit structures into them.
+ */
+
 #pragma once
 
 #include <elf.h>
@@ -17,146 +27,164 @@
 
 #include "file_manip.h"
 
-/* Cast an address to the matching 32-bit or 64-bit ELF structure */
-#define ehdr32(addr) ((Elf32_Ehdr*)(addr))
-#define ehdr64(addr) ((Elf64_Ehdr*)(addr))
+/** @name Casts to ELF structures
+ *  Cast an address to the matching 32-bit or 64-bit structure of @c <elf.h>.
+ *  @{ */
+#define ehdr32(addr) ((Elf32_Ehdr*)(addr)) /**< ELF header, 32-bit. */
+#define ehdr64(addr) ((Elf64_Ehdr*)(addr)) /**< ELF header, 64-bit. */
 
-#define phdr32(addr) ((Elf32_Phdr*)(addr))
-#define phdr64(addr) ((Elf64_Phdr*)(addr))
+#define phdr32(addr) ((Elf32_Phdr*)(addr)) /**< Program header, 32-bit. */
+#define phdr64(addr) ((Elf64_Phdr*)(addr)) /**< Program header, 64-bit. */
 
-#define shdr32(addr) ((Elf32_Shdr*)(addr))
-#define shdr64(addr) ((Elf64_Shdr*)(addr))
+#define shdr32(addr) ((Elf32_Shdr*)(addr)) /**< Section header, 32-bit. */
+#define shdr64(addr) ((Elf64_Shdr*)(addr)) /**< Section header, 64-bit. */
 
-#define sym32(addr) ((Elf32_Sym*)(addr))
-#define sym64(addr) ((Elf64_Sym*)(addr))
+#define sym32(addr) ((Elf32_Sym*)(addr)) /**< Symbol, 32-bit. */
+#define sym64(addr) ((Elf64_Sym*)(addr)) /**< Symbol, 64-bit. */
 
-#define rel32(addr) ((Elf32_Rel*)(addr))
-#define rel64(addr) ((Elf64_Rel*)(addr))
+#define rel32(addr) ((Elf32_Rel*)(addr)) /**< Relocation, 32-bit. */
+#define rel64(addr) ((Elf64_Rel*)(addr)) /**< Relocation, 64-bit. */
 
-#define rela32(addr) ((Elf32_Rela*)(addr))
-#define rela64(addr) ((Elf64_Rela*)(addr))
+#define rela32(addr) ((Elf32_Rela*)(addr)) /**< Relocation with addend, 32. */
+#define rela64(addr) ((Elf64_Rela*)(addr)) /**< Relocation with addend, 64. */
 
-#define dyn32(addr) ((Elf32_Dyn*)(addr))
-#define dyn64(addr) ((Elf64_Dyn*)(addr))
+#define dyn32(addr) ((Elf32_Dyn*)(addr)) /**< Dynamic entry, 32-bit. */
+#define dyn64(addr) ((Elf64_Dyn*)(addr)) /**< Dynamic entry, 64-bit. */
 
-#define nhdr32(addr) ((Elf32_Nhdr*)(addr))
-#define nhdr64(addr) ((Elf64_Nhdr*)(addr))
+#define nhdr32(addr) ((Elf32_Nhdr*)(addr)) /**< Note header, 32-bit. */
+#define nhdr64(addr) ((Elf64_Nhdr*)(addr)) /**< Note header, 64-bit. */
+/** @} */
 
-/* Word size in bits, used to size the displayed symbol values */
-#define ARCH32 32
-#define ARCH64 64
-#define ARCHERR -1
+/** @name Architectures
+ *  Word size in bits, used to size the displayed symbol values.
+ *  @{ */
+#define ARCH32 32  /**< 32-bit file (ELFCLASS32). */
+#define ARCH64 64  /**< 64-bit file (ELFCLASS64). */
+#define ARCHERR -1 /**< Unknown class. */
+/** @} */
 
-/* Number of hex digits of a displayed symbol value */
+/**
+ * @brief Number of hex digits of a displayed symbol value.
+ *
+ * @param arch #ARCH32 or #ARCH64.
+ * @return 8 for #ARCH32, 16 for #ARCH64.
+ */
 #define arch_hex_width(arch) ((arch) >> 2)
 
-/**
- * @brief Architecture-independant types
- *
- */
-typedef Elf64_Half ElfN_Half;
-typedef Elf64_Word ElfN_Word;
-typedef Elf64_Xword ElfN_Xword;
-typedef Elf64_Addr ElfN_Addr;
-typedef Elf64_Off ElfN_Off;
-typedef Elf64_Sword ElfN_Sword;
-typedef Elf64_Sxword ElfN_Sxword;
-typedef Elf64_Section ElfN_Section;
-typedef Elf64_Versym ElfN_Versym;
+/** @name Architecture-independent scalar types
+ *  Aliases of the 64-bit types, wide enough for both classes.
+ *  @{ */
+typedef Elf64_Half ElfN_Half;       /**< Unsigned 16-bit. */
+typedef Elf64_Word ElfN_Word;       /**< Unsigned 32-bit. */
+typedef Elf64_Xword ElfN_Xword;     /**< Unsigned 64-bit. */
+typedef Elf64_Addr ElfN_Addr;       /**< Virtual address. */
+typedef Elf64_Off ElfN_Off;         /**< File offset. */
+typedef Elf64_Sword ElfN_Sword;     /**< Signed 32-bit. */
+typedef Elf64_Sxword ElfN_Sxword;   /**< Signed 64-bit. */
+typedef Elf64_Section ElfN_Section; /**< Section index. */
+typedef Elf64_Versym ElfN_Versym;   /**< Version symbol information. */
+/** @} */
 
+/** @brief Architecture-independent ELF header. @see Ehdr_to_generic() */
 typedef struct {
-    unsigned char e_ident[EI_NIDENT]; /* Magic number and other info */
-    ElfN_Half e_type;                 /* Object file type */
-    ElfN_Half e_machine;              /* Architecture */
-    ElfN_Word e_version;              /* Object file version */
-    ElfN_Addr e_entry;                /* Entry point virtual address */
-    ElfN_Off e_phoff;                 /* Program header table file offset */
-    ElfN_Off e_shoff;                 /* Section header table file offset */
-    ElfN_Word e_flags;                /* Processor-specific flags */
-    ElfN_Half e_ehsize;               /* ELF header size in bytes */
-    ElfN_Half e_phentsize;            /* Program header table entry size */
-    ElfN_Half e_phnum;                /* Program header table entry count */
-    ElfN_Half e_shentsize;            /* Section header table entry size */
-    ElfN_Half e_shnum;                /* Section header table entry count */
-    ElfN_Half e_shstrndx;             /* Section header string table index */
+    unsigned char e_ident[EI_NIDENT]; /**< Magic number and other info. */
+    ElfN_Half e_type;                 /**< Object file type. */
+    ElfN_Half e_machine;              /**< Architecture. */
+    ElfN_Word e_version;              /**< Object file version. */
+    ElfN_Addr e_entry;                /**< Entry point virtual address. */
+    ElfN_Off e_phoff;                 /**< Program header table file offset. */
+    ElfN_Off e_shoff;                 /**< Section header table file offset. */
+    ElfN_Word e_flags;                /**< Processor-specific flags. */
+    ElfN_Half e_ehsize;               /**< ELF header size in bytes. */
+    ElfN_Half e_phentsize;            /**< Program header table entry size. */
+    ElfN_Half e_phnum;                /**< Program header table entry count. */
+    ElfN_Half e_shentsize;            /**< Section header table entry size. */
+    ElfN_Half e_shnum;                /**< Section header table entry count. */
+    ElfN_Half e_shstrndx;             /**< Section header string table index. */
 } ElfN_Ehdr;
 
+/** @brief Architecture-independent section header. @see Shdr_to_generic() */
 typedef struct {
-    ElfN_Word sh_name;       /* Section name (string tbl index) */
-    ElfN_Word sh_type;       /* Section type */
-    ElfN_Xword sh_flags;     /* Section flags */
-    ElfN_Addr sh_addr;       /* Section virtual addr at execution */
-    ElfN_Off sh_offset;      /* Section file offset */
-    ElfN_Xword sh_size;      /* Section size in bytes */
-    ElfN_Word sh_link;       /* Link to another section */
-    ElfN_Word sh_info;       /* Additional section information */
-    ElfN_Xword sh_addralign; /* Section alignment */
-    ElfN_Xword sh_entsize;   /* Entry size if section holds table */
+    ElfN_Word sh_name;       /**< Section name (string table index). */
+    ElfN_Word sh_type;       /**< Section type. */
+    ElfN_Xword sh_flags;     /**< Section flags. */
+    ElfN_Addr sh_addr;       /**< Section virtual address at execution. */
+    ElfN_Off sh_offset;      /**< Section file offset. */
+    ElfN_Xword sh_size;      /**< Section size in bytes. */
+    ElfN_Word sh_link;       /**< Link to another section. */
+    ElfN_Word sh_info;       /**< Additional section information. */
+    ElfN_Xword sh_addralign; /**< Section alignment. */
+    ElfN_Xword sh_entsize;   /**< Entry size if the section holds a table. */
 } ElfN_Shdr;
 
+/** @brief Architecture-independent symbol. @see Sym_to_generic() */
 typedef struct {
-    ElfN_Word st_name;      /* Symbol name (string tbl index) */
-    unsigned char st_info;  /* Symbol type and binding */
-    unsigned char st_other; /* Symbol visibility */
-    ElfN_Section st_shndx;  /* Section index */
-    ElfN_Addr st_value;     /* Symbol value */
-    ElfN_Xword st_size;     /* Symbol size */
+    ElfN_Word st_name;      /**< Symbol name (string table index). */
+    unsigned char st_info;  /**< Symbol type and binding. */
+    unsigned char st_other; /**< Symbol visibility. */
+    ElfN_Section st_shndx;  /**< Section index. */
+    ElfN_Addr st_value;     /**< Symbol value. */
+    ElfN_Xword st_size;     /**< Symbol size. */
 } ElfN_Sym;
 
-/* Symbol as displayed by nm */
+/**
+ * @brief Symbol as displayed by nm.
+ *
+ * Built by read_elfN() from an ElfN_Sym, filtered and printed by
+ * print_symbols().
+ */
 typedef struct elf_sym_print {
-    long value;   /* Symbol value */
-    char* name;   /* Symbol name, points into the string table */
-    int arch;     /* ARCH32 or ARCH64 */
-    int type;     /* Letter displayed by nm */
-    int external; /* Set for external symbols */
-    int undef;    /* Set for undefined symbols */
-    int section;  /* Set for STT_SECTION symbols */
-    int file;     /* Set for STT_FILE symbols */
+    long value;   /**< Value displayed by nm. */
+    char* name;   /**< Symbol name, points into the mapped file. */
+    int arch;     /**< #ARCH32 or #ARCH64. */
+    int type;     /**< Letter displayed by nm. */
+    int external; /**< Non-zero for external symbols. */
+    int undef;    /**< Non-zero for undefined symbols. */
+    int section;  /**< Non-zero for @c STT_SECTION symbols. */
+    int file;     /**< Non-zero for @c STT_FILE symbols. */
 } elf_sym_print_t;
 
-/* A table section header and the header of its linked string table */
+/**
+ * @brief A table section and the string table its names point into.
+ *
+ * Filled by get_symbol_sections(), for either .symtab and .strtab, or the
+ * section name string table alone.
+ */
 typedef struct elf_link_str {
-    ElfN_Shdr elems;
-    ElfN_Shdr strings;
-    int is;
+    ElfN_Shdr elems;   /**< Header of the table section (empty if none). */
+    ElfN_Shdr strings; /**< Header of the linked string table. */
+    int is;            /**< Non-zero if the section was found. */
 } elf_link_str_t;
 
-/**
- * @brief elf_to_generic.c - Contains utilities meant to manipulate
- * architecture-independant structures
- */
+/** @name Conversion to the generic structures (elf_to_generic.c)
+ *  @{ */
 int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic);
 int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic);
 int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic);
+/** @} */
 
-/**
- * @brief read_elfN.c - Read ELF files. Architecture-independant.
- */
+/** @name Symbol extraction (read_elfN.c)
+ *  @{ */
 elf_sym_print_t** read_elfN(void* addr, size_t size);
 const char* elf_str_at(void* addr, size_t size, const ElfN_Shdr* strtab,
                        size_t off);
+/** @} */
 
-/**
- * @brief type_deduction.c - Contains the type deduction utilities
- *
- */
+/** @name Symbol type deduction (type_deduction.c)
+ *  @{ */
 int is_debug_section(ElfN_Xword section_flag, const char* name);
-int section_type_from_name(const char* name);
 int is_undef(ElfN_Section st_shndx);
 int is_external(ElfN_Section st_shndx, unsigned char st_info);
-
 int get_symbol_type(void* addr, size_t size, const elf_link_str_t* symbol_tab,
                     size_t shnum, const ElfN_Sym* s);
+/** @} */
 
-/**
- * @brief format.c - ELF integrity checks
- *
- */
-
-/* Result of the ELF integrity checks. Printing is left to the caller. */
-#define ELF_OK 0
-#define ELF_ERR_NOT_RECOGNIZED -1
-#define ELF_ERR_NOT_IMPLEMENTED -2
+/** @name Integrity checks (elf_format.c)
+ *  Results of is_elf_format(). Printing is left to the caller.
+ *  @{ */
+#define ELF_OK 0                   /**< Supported ELF file. */
+#define ELF_ERR_NOT_RECOGNIZED -1  /**< Not an ELF file, or truncated. */
+#define ELF_ERR_NOT_IMPLEMENTED -2 /**< Valid ELF, but not little-endian. */
 
 int is_elf_format(mappedmem_t* mapped);
+/** @} */

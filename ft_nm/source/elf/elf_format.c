@@ -10,22 +10,36 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file elf_format.c
+ * @brief ELF integrity checks, run before any other read of the file.
+ */
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "nm_elf.h"
 
+/**
+ * @brief Class of the file being read: #ARCH32 or #ARCH64.
+ *
+ * Set by is_elf_format(), read by every module that walks the ELF structures.
+ */
 int arch_global;
 
 /**
- * @brief Check the e_ident field of an ELF header: magic number, class,
- * version and endianness. Set arch_global to the detected class.
+ * @brief Check the @c e_ident field of an ELF header: magic number, class,
+ * version and endianness. Set #arch_global to the detected class.
  *
- * @param addr Address of the first byte of the mapped memory.
- * @return int. ELF_OK if the identification is valid, ELF_ERR_NOT_RECOGNIZED
- * if it is not an ELF file, ELF_ERR_NOT_IMPLEMENTED if it is not little endian
- * (the only supported byte order). Nothing is printed.
+ * Nothing is printed.
+ *
+ * @param[in] addr Address of the first byte of the mapped memory.
+ * @retval ELF_OK The identification is valid.
+ * @retval ELF_ERR_NOT_RECOGNIZED Not an ELF file.
+ * @retval ELF_ERR_NOT_IMPLEMENTED Not little endian, the only supported byte
+ *         order.
+ * @pre At least @c EI_NIDENT bytes are readable at @p addr.
  */
 static int _test_elf_ident(void* addr) {
     char* n_ident = addr;
@@ -60,15 +74,16 @@ static int _test_elf_ident(void* addr) {
 }
 
 /**
- * @brief Tell whether a table of count entries of entsize bytes, starting at
- * off, lies entirely inside a file of size bytes. Written to never overflow,
- * whatever the values read from a corrupted header.
+ * @brief Tell whether a table of @p count entries of @p entsize bytes,
+ * starting at @p off, lies entirely inside a file of @p size bytes. Written to
+ * never overflow, whatever the values read from a corrupted header.
  *
- * @param size Size of the file in bytes.
- * @param off Offset of the table from the start of the file.
- * @param entsize Size of one entry in bytes.
- * @param count Number of entries.
- * @return bool. true if the whole table is inside the file.
+ * @param[in] size Size of the file in bytes.
+ * @param[in] off Offset of the table from the start of the file.
+ * @param[in] entsize Size of one entry in bytes.
+ * @param[in] count Number of entries.
+ * @retval true The whole table is inside the file.
+ * @retval false It is not, or @p entsize is 0.
  */
 static bool _table_fits(size_t size, uint64_t off, uint64_t entsize,
                         uint64_t count) {
@@ -83,11 +98,12 @@ static bool _table_fits(size_t size, uint64_t off, uint64_t entsize,
  * header table fit inside the mapped file. The position of the tables is not
  * assumed: only that they lie inside the file.
  *
- * Needs arch_global to be set, so it must run after _test_elf_ident.
+ * Nothing is printed.
  *
- * @param mapped Memory mapping of the file.
- * @return int. ELF_OK if the file is large enough, ELF_ERR_NOT_RECOGNIZED
- * otherwise. Nothing is printed.
+ * @param[in] mapped Memory mapping of the file.
+ * @retval ELF_OK The file is large enough.
+ * @retval ELF_ERR_NOT_RECOGNIZED A header or a table exceeds the file.
+ * @pre #arch_global is set: _test_elf_ident() succeeded.
  */
 static int _test_file_size(mappedmem_t* mapped) {
     const bool is64 = (arch_global == ARCH64);
@@ -144,9 +160,11 @@ static int _test_file_size(mappedmem_t* mapped) {
  * @brief Check that a memory region holds a supported ELF file. This module
  * only reports the kind of failure, printing it is up to the caller.
  *
- * @param mapped Memory mapping to check.
- * @return int. ELF_OK if the region is a supported ELF file, otherwise
- * ELF_ERR_NOT_RECOGNIZED or ELF_ERR_NOT_IMPLEMENTED.
+ * @param[in] mapped Memory mapping to check.
+ * @retval ELF_OK The region is a supported ELF file.
+ * @retval ELF_ERR_NOT_RECOGNIZED Not an ELF file, or truncated.
+ * @retval ELF_ERR_NOT_IMPLEMENTED Valid ELF file, but not little endian.
+ * @post On success, #arch_global holds the class of the file.
  */
 int is_elf_format(mappedmem_t* mapped) {
     if (mapped->size < EI_NIDENT) {

@@ -10,6 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file options.c
+ * @brief Command line parsing with getopt_long().
+ */
+
 #include "options.h"
 
 #include <getopt.h>
@@ -17,11 +22,15 @@
 #include "print.h"
 
 /**
- * @brief Supported options, as expected by getopt_long: the short form string
- * and the table of long forms. Both must stay in sync.
+ * @brief Short forms of the supported options, as expected by getopt_long().
+ * @warning Must stay in sync with #long_options.
  */
 static const char* short_options = "aghpru";
 
+/**
+ * @brief Long forms of the supported options, as expected by getopt_long().
+ * @warning Must stay in sync with #short_options.
+ */
 static struct option long_options[] = {
     {"debug-syms", no_argument, nullptr, 'a'},
     {"extern-only", no_argument, nullptr, 'g'},
@@ -34,13 +43,14 @@ static struct option long_options[] = {
 /**
  * @brief Parse the command line according to the supported options. The
  * remaining arguments are the files to process, "a.out" if there are none.
- * Print the usage on stderr and exit with status 1 if an unknown option is met.
  *
- * @param n_args Number of command line arguments.
- * @param args Array of null terminated strings: the arguments. Reordered by
- * getopt_long, the file list points into it.
- * @param out Option structure filled by the parser.
- * @return int. 0 on success.
+ * @param[in] n_args Number of command line arguments.
+ * @param[in,out] args Array of null terminated strings: the arguments.
+ *                Reordered by getopt_long(), the file list points into it.
+ * @param[out] out Option structure filled by the parser.
+ * @retval 0 Success.
+ * @note Does not return if an unknown option is met: prints the usage on
+ * stderr and exits with status 1 (see usage()).
  */
 int get_options(int n_args, char** args, nm_args_t* out) {
     int opt;

@@ -10,6 +10,12 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file read_elfN.c
+ * @brief Extraction of the .symtab symbols of an ELF file, 32 or 64 bits,
+ * into their displayable form.
+ */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -28,9 +34,10 @@ extern int arch_global;
  * @brief Tell whether the contents of a section lie entirely inside the file.
  * Written to never overflow, whatever the values of a corrupted header.
  *
- * @param size Size of the file in bytes.
- * @param s Section header.
- * @return int. 1 if the whole section is inside the file, 0 otherwise.
+ * @param[in] size Size of the file in bytes.
+ * @param[in] s Section header.
+ * @retval 1 The whole section is inside the file.
+ * @retval 0 It is not.
  */
 static int section_in_file(size_t size, const ElfN_Shdr* s) {
     return s->sh_offset <= size && s->sh_size <= size - s->sh_offset;
@@ -41,11 +48,12 @@ static int section_in_file(size_t size, const ElfN_Shdr* s) {
  * table must be inside the file, the offset inside the table, and the string
  * must be null terminated before the end of the table.
  *
- * @param addr Address of the start of the ELF file.
- * @param size Size of the file in bytes.
- * @param strtab Header of the string table.
- * @param off Offset of the string in the table.
- * @return const char*. The string, or "<corrupt>" if it can't be read.
+ * @param[in] addr Address of the start of the ELF file.
+ * @param[in] size Size of the file in bytes.
+ * @param[in] strtab Header of the string table.
+ * @param[in] off Offset of the string in the table.
+ * @return The string, pointing into the mapped file, or #ELF_CORRUPT_NAME if
+ * it can't be read. Never @c nullptr.
  */
 const char* elf_str_at(void* addr, size_t size, const ElfN_Shdr* strtab,
                        size_t off) {
@@ -61,18 +69,22 @@ const char* elf_str_at(void* addr, size_t size, const ElfN_Shdr* strtab,
 
 /**
  * @brief Locate the section name string table and .symtab of an ELF file, along
- * with the string table linked to the symbol table. A null pointer skips the
- * matching output. A symbol table that is unusable (not
- * inside the file, or with an entry size that isn't the one of a symbol) is
- * ignored.
+ * with the string table linked to the symbol table.
  *
- * @param addr Address of the start of the ELF file.
- * @param size Size of the file in bytes.
- * @param ehdr ELF header of the file.
- * @param shnum Number of sections, extended numbering resolved.
- * @param shstrndx Index of the section name string table, resolved.
- * @param sections Filled with the section name string table (.shstrtab).
- * @param symbols Filled with .symtab and its string table (.strtab).
+ * A null pointer skips the matching output. A symbol table that is unusable
+ * (not inside the file, or with an entry size that isn't the one of a symbol)
+ * is ignored.
+ *
+ * @param[in] addr Address of the start of the ELF file.
+ * @param[in] size Size of the file in bytes.
+ * @param[in] ehdr ELF header of the file.
+ * @param[in] shnum Number of sections, extended numbering resolved.
+ * @param[in] shstrndx Index of the section name string table, resolved.
+ * @param[out] sections Filled with the section name string table (.shstrtab),
+ *             or @c nullptr.
+ * @param[out] symbols Filled with .symtab and its string table (.strtab), or
+ *             @c nullptr. Its @c is field stays 0 if there is no usable
+ *             .symtab.
  */
 static void get_symbol_sections(void* addr, size_t size, const ElfN_Ehdr* ehdr,
                                 size_t shnum, size_t shstrndx,
@@ -119,12 +131,15 @@ static void get_symbol_sections(void* addr, size_t size, const ElfN_Ehdr* ehdr,
  * terminated.
  *
  * Nothing is read outside of the file: the fields read from the headers are
- * checked first, and a name that can't be read is displayed as "<corrupt>".
+ * checked first, and a name that can't be read is displayed as
+ * #ELF_CORRUPT_NAME.
  *
- * @param addr Address of the start of the ELF file.
- * @param size Size of the file in bytes.
- * @return elf_sym_print_t**. Array of symbols, nullptr if there is no usable
- * .symtab.
+ * @param[in] addr Address of the start of the ELF file.
+ * @param[in] size Size of the file in bytes.
+ * @return Null terminated array of symbols, or @c nullptr if there is no usable
+ * .symtab. Owned by the resource collector: release it with
+ * del_ptr_resource(), never with @c free().
+ * @pre is_elf_format() succeeded on this file (#arch_global is set).
  */
 elf_sym_print_t** read_elfN(void* addr, size_t size) {
     elf_sym_print_t** ret_array = nullptr;

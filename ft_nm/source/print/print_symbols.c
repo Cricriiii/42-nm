@@ -10,6 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file print_symbols.c
+ * @brief Sorting, filtering and printing of a symbol list, as nm does.
+ */
+
 #include <ctype.h>
 #include <locale.h>
 #include <stddef.h>
@@ -22,24 +27,24 @@
 #include "resource_collector.h"
 
 /**
- * @brief Set the locale category used by strcoll when sorting symbols, from
+ * @brief Set the locale category used by strcoll() when sorting symbols, from
  * the environment.
  *
- * @param locale Locale category (LC_COLLATE, LC_ALL...).
+ * @param[in] locale Locale category (@c LC_COLLATE, @c LC_ALL...).
  */
 void set_symbol_locale(int locale) {
     setlocale(locale, "");
 }
 
 /**
- * @brief Compare function provided to qsort. Order symbols by name, in
- * ascending or descending order. The comparison is done by strcoll, so it
+ * @brief Compare function provided to qsort(). Order symbols by name, in
+ * ascending or descending order. The comparison is done by strcoll(), so it
  * follows the collation rules of the current locale.
  *
- * @param a Pointer to the first elf_sym_print_t* to compare.
- * @param b Pointer to the second elf_sym_print_t* to compare.
- * @return int. Negative, zero or positive as strcoll() does, with the sign
- * inverted if the reverse sort is requested.
+ * @param[in] a Pointer to the first @c elf_sym_print_t* to compare.
+ * @param[in] b Pointer to the second @c elf_sym_print_t* to compare.
+ * @return Negative, zero or positive as strcoll() does, with the sign
+ * inverted if the reverse sort is requested (nm_args::rsort).
  */
 static int compare_on_name(const void* a, const void* b) {
     const char* s1 = (*(const elf_sym_print_t**)a)->name;
@@ -50,11 +55,13 @@ static int compare_on_name(const void* a, const void* b) {
 }
 
 /**
- * @brief Sort, filter and print symbols according to the command line options.
- * Each printed symbol is released. The first element, the null symbol, is
- * never displayed.
+ * @brief Sort, filter and print symbols on stdout according to the command
+ * line options (#options). The first element, the null symbol, is never
+ * displayed.
  *
- * @param symbols Null terminated array of pointers to symbols, or nullptr.
+ * @param[in,out] symbols Null terminated array of pointers to symbols, as
+ *                returned by read_elfN(). Sorted in place. If @c nullptr,
+ *                #ELF_NO_SYMBOLS is reported on stderr.
  */
 void print_symbols(elf_sym_print_t** symbols) {
     elf_sym_print_t** ptr = symbols;

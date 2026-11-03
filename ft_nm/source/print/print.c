@@ -10,6 +10,14 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file print.c
+ * @brief Usage and error messages, worded and formatted like nm.
+ *
+ * Every error message is prefixed with the program name and the name of the
+ * file being processed, both registered beforehand.
+ */
+
 #include "print.h"
 
 #include <errno.h>
@@ -21,17 +29,24 @@
 #include "xalloc.h"
 
 /**
- * @brief State of the print module, set through print_set_program_name() and
- * print_set_filename(). Both are prefixed to every error message. The strings
- * are not copied, they must outlive the module.
+ * @brief Program name, prefixed to every message.
+ *
+ * Set by print_set_program_name(). Not copied.
  */
 static char* program_name;
+
+/**
+ * @brief Name of the file being processed, prefixed to every error message.
+ *
+ * Set by print_set_filename(). Not copied.
+ */
 static char* filename;
 
 /**
  * @brief Let user modules register the global program name.
  *
- * @param pname Program name.
+ * @param[in] pname Program name.
+ * @warning The string is not copied, it must outlive the module.
  */
 void print_set_program_name(const char* pname) {
     program_name = (char*)pname;
@@ -40,7 +55,8 @@ void print_set_program_name(const char* pname) {
 /**
  * @brief Let user modules register the currently processed file name.
  *
- * @param fname File name.
+ * @param[in] fname File name.
+ * @warning The string is not copied, it must stay valid until the next call.
  */
 void print_set_filename(const char* fname) {
     filename = (char*)fname;
@@ -49,8 +65,10 @@ void print_set_filename(const char* fname) {
 /**
  * @brief Print usage and terminate the program with the status value.
  *
- * @param stream Output FILE* stream.
- * @param status Exit code value.
+ * @param[in] stream Output stream: @c stdout for @c --help, @c stderr for an
+ *            invalid option.
+ * @param[in] status Exit code value.
+ * @note Does not return.
  */
 [[noreturn]] void usage(FILE* stream, int status) {
     fprintf(stream, "Usage: %s [option(s)] [file(s)]\n", program_name);
@@ -68,10 +86,11 @@ void print_set_filename(const char* fname) {
 }
 
 /**
- * @brief Internal function. Allocate and return the "program_name: filename"
- * part of an error message. The caller must free it.
+ * @brief Allocate and return the <tt>"program_name: filename"</tt> part of an
+ * error message.
  *
- * @return char*. The allocated string.
+ * @return The allocated string. The caller must @c free() it.
+ * @pre Both the program name and the file name are registered.
  */
 static char* error_header(void) {
     size_t errlen =
@@ -82,9 +101,11 @@ static char* error_header(void) {
 }
 
 /**
- * @brief Prints a "program_name: filename: error message" error string based on
- * perror().
+ * @brief Print a <tt>"program_name: filename: error message"</tt> error string
+ * on stderr, based on perror() and the current @c errno.
  *
+ * A missing file (@c ENOENT) is worded like nm:
+ * <tt>"program_name: 'filename': No such file"</tt>.
  */
 void print_perror(void) {
     /* nm words a missing file differently from strerror() */
@@ -98,7 +119,8 @@ void print_perror(void) {
 }
 
 /**
- * @brief Prints "program_name: Warning: 'filename' is a directory" on stderr.
+ * @brief Print <tt>"program_name: Warning: 'filename' is a directory"</tt> on
+ * stderr.
  */
 void print_warning_directory(void) {
     fprintf(stderr, "%s: Warning: '%s' is a directory\n", program_name,
@@ -106,10 +128,11 @@ void print_warning_directory(void) {
 }
 
 /**
- * @brief Prints a "program_name: filename: error message" error string based on
- * a user defined error message.
+ * @brief Print a <tt>"program_name: filename: error message"</tt> error string
+ * on stderr, based on a user defined error message.
  *
- * @param errmsg User defined error message.
+ * @param[in] errmsg User defined error message, usually one of the error
+ *            message macros of print.h (#ELF_NOT_RECOGNIZED...).
  */
 void print_err(const char* errmsg) {
     char* err_header = error_header();

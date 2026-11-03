@@ -10,6 +10,14 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file elf_to_generic.c
+ * @brief Conversion of 32-bit and 64-bit ELF structures into the generic
+ * @c ElfN_* structures.
+ *
+ * Every read goes through @c memcpy(), so the source needs no alignment.
+ */
+
 #include <string.h>
 
 #include "nm_elf.h"
@@ -18,8 +26,8 @@
 /**
  * @brief Widen a 32-bit ELF header into the generic (64-bit) header.
  *
- * @param addr Address of the 32-bit ELF header.
- * @return ElfN_Ehdr. The converted header.
+ * @param[in] addr Address of the 32-bit ELF header.
+ * @return The converted header.
  */
 static ElfN_Ehdr Ehdr32to64(void* addr) {
     Elf32_Ehdr raw;
@@ -47,9 +55,10 @@ static ElfN_Ehdr Ehdr32to64(void* addr) {
  * @brief Read the ELF header of a file into the generic (64-bit) header,
  * whatever the class of the file.
  *
- * @param addr Address of the start of the ELF file.
- * @param generic Header filled by the function.
- * @return int. 0 on success, 1 if the ELF class is unknown.
+ * @param[in] addr Address of the start of the ELF file.
+ * @param[out] generic Header filled by the function.
+ * @retval 0 Success.
+ * @retval 1 Unknown ELF class, reported on stderr. @p generic is untouched.
  */
 int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];
@@ -71,8 +80,8 @@ int Ehdr_to_generic(void* addr, ElfN_Ehdr* generic) {
 /**
  * @brief Widen a 32-bit ELF section header into the generic (64-bit) one.
  *
- * @param addr Address of the 32-bit section header.
- * @return ElfN_Shdr. The converted section header.
+ * @param[in] addr Address of the 32-bit section header.
+ * @return The converted section header.
  */
 static ElfN_Shdr Shdr32to64(void* addr) {
     Elf32_Shdr raw;
@@ -97,10 +106,12 @@ static ElfN_Shdr Shdr32to64(void* addr) {
  * @brief Read a section header into the generic (64-bit) one, whatever the
  * class of the file.
  *
- * @param addr Address of the start of the ELF file.
- * @param offset Offset of the section header from addr.
- * @param generic Section header filled by the function.
- * @return int. 0 on success, 1 if the ELF class is unknown.
+ * @param[in] addr Address of the start of the ELF file.
+ * @param[in] offset Offset of the section header from @p addr.
+ * @param[out] generic Section header filled by the function.
+ * @retval 0 Success.
+ * @retval 1 Unknown ELF class, reported on stderr. @p generic is untouched.
+ * @pre The section header lies inside the file (not checked here).
  */
 int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];
@@ -122,8 +133,8 @@ int Shdr_to_generic(void* addr, size_t offset, ElfN_Shdr* generic) {
 /**
  * @brief Widen a 32-bit ELF symbol into the generic (64-bit) one.
  *
- * @param addr Address of the 32-bit symbol.
- * @return ElfN_Sym. The converted symbol.
+ * @param[in] addr Address of the 32-bit symbol.
+ * @return The converted symbol.
  */
 static ElfN_Sym Sym32to64(void* addr) {
     Elf32_Sym raw;
@@ -144,10 +155,12 @@ static ElfN_Sym Sym32to64(void* addr) {
  * @brief Read a symbol into the generic (64-bit) one, whatever the class of
  * the file.
  *
- * @param addr Address of the start of the ELF file.
- * @param offset Offset of the symbol from addr.
- * @param generic Symbol filled by the function.
- * @return int. 0 on success, 1 if the ELF class is unknown.
+ * @param[in] addr Address of the start of the ELF file.
+ * @param[in] offset Offset of the symbol from @p addr.
+ * @param[out] generic Symbol filled by the function.
+ * @retval 0 Success.
+ * @retval 1 Unknown ELF class, reported on stderr. @p generic is untouched.
+ * @pre The symbol lies inside the file (not checked here).
  */
 int Sym_to_generic(void* addr, size_t offset, ElfN_Sym* generic) {
     int ei_class = ((char*)addr)[EI_CLASS];

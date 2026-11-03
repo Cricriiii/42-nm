@@ -1,0 +1,74 @@
+# Doxygen configuration of ft_nm.
+# Only the options that differ from the defaults are listed here.
+# Full reference: `doxygen -g -` or https://www.doxygen.nl/manual/config.html
+
+# ---------------------------------------------------------------------------- #
+# project                                                                      #
+# ---------------------------------------------------------------------------- #
+
+PROJECT_NAME           = ft_nm
+PROJECT_BRIEF          = "A C implementation of the nm command"
+OUTPUT_DIRECTORY       = .docs
+OUTPUT_LANGUAGE        = English
+
+# ---------------------------------------------------------------------------- #
+# input                                                                        #
+# ---------------------------------------------------------------------------- #
+
+INPUT                  = mainpage.dox include libs source
+RECURSIVE              = YES
+FILE_PATTERNS          = *.c *.h *.dox
+OPTIMIZE_OUTPUT_FOR_C  = YES
+STRIP_FROM_PATH        = .
+FULL_PATH_NAMES        = YES
+
+# ---------------------------------------------------------------------------- #
+# extraction                                                                   #
+# ---------------------------------------------------------------------------- #
+
+# Only documented entities are shown, so undocumented ones raise a warning.
+EXTRACT_ALL            = NO
+# Document the static functions and variables of the .c files.
+EXTRACT_STATIC         = YES
+# The brief description is the @brief paragraph only, not the first sentence.
+JAVADOC_AUTOBRIEF      = NO
+# Keep the declaration order of the sources.
+SORT_MEMBER_DOCS       = NO
+
+# ---------------------------------------------------------------------------- #
+# preprocessing                                                                #
+# ---------------------------------------------------------------------------- #
+
+# GNU and C23 attributes are not understood by the Doxygen parser: hide them.
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = "__attribute(x)=" \
+                         "__attribute__(x)="
+
+# ---------------------------------------------------------------------------- #
+# warnings                                                                     #
+# ---------------------------------------------------------------------------- #
+
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_NO_PARAMDOC       = YES
+# Any warning makes doxygen exit with an error, once all of them are printed.
+WARN_AS_ERROR          = FAIL_ON_WARNINGS
+
+# ---------------------------------------------------------------------------- #
+# output                                                                       #
+# ---------------------------------------------------------------------------- #
+
+GENERATE_HTML          = YES
+GENERATE_TREEVIEW      = YES
+GENERATE_LATEX         = NO
+# Browsable sources, with links between the documentation and the code.
+SOURCE_BROWSER         = YES
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+# Include graphs and call graphs need Graphviz (`dot`). Set to NO without it.
+HAVE_DOT               = NO

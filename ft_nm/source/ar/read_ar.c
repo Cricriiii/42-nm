@@ -10,6 +10,12 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file read_ar.c
+ * @brief Walk of an ar archive (static library) and display of the symbols of
+ * each ELF member.
+ */
+
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,9 +30,10 @@ extern bool print_filename;
 /**
  * @brief Classify an archive member from the name field of its header.
  *
- * @param hdr Header of the member to classify.
- * @return AR_IS_SYM_TAB_RET for the symbol table ("/"), AR_IS_STR_TAB_RET for
- * the long name table ("//"), AR_REG_TAB_RET for any other member.
+ * @param[in] hdr Header of the member to classify.
+ * @retval AR_IS_SYM_TAB_RET Symbol table ("/" or "/SYM64/").
+ * @retval AR_IS_STR_TAB_RET Long name table ("//").
+ * @retval AR_REG_TAB_RET Any other member.
  */
 static int _ar_is_hdr(struct ar_hdr* hdr) {
     if (ar_is_symbol_tab(hdr->ar_name) || !memcmp(hdr->ar_name, "/SYM64/", 7)) {
@@ -39,12 +46,13 @@ static int _ar_is_hdr(struct ar_hdr* hdr) {
 }
 
 /**
- * @brief Parse the decimal ar_size field of a member header. The field is not
- * null terminated and padded with spaces.
+ * @brief Parse the decimal @c ar_size field of a member header. The field is
+ * not null terminated and padded with spaces.
  *
- * @param field The ar_size field (10 bytes).
- * @param out Parsed size.
- * @return true if the field holds a number, false otherwise.
+ * @param[in] field The @c ar_size field (10 bytes).
+ * @param[out] out Parsed size. Left untouched on failure.
+ * @retval true The field holds a number.
+ * @retval false The field is empty or holds a non-digit character.
  */
 static bool _parse_ar_size(const char* field, size_t* out) {
     char buf[sizeof(((struct ar_hdr*)0)->ar_size) + 1] = {};
@@ -69,21 +77,22 @@ static bool _parse_ar_size(const char* field, size_t* out) {
 /**
  * @brief Display the symbols of a regular archive member.
  *
- * Resolve the member name (inline, or "/<offset>" into the long name table),
- * strip the trailing '/' terminator, then print the symbols of the embedded
- * ELF file under that name. Every read stays inside the name field, the long
- * name table and the member data.
+ * Resolve the member name (inline, or <tt>"/offset"</tt> into the long name
+ * table), strip the trailing '/' terminator, then print the symbols of the
+ * embedded ELF file under that name. Every read stays inside the name field,
+ * the long name table and the member data.
  *
- * @param mapped Memory mapping of the whole archive.
- * @param ofst Offset of the member header from the start of the mapping.
- * @param member_size Size of the member data, as declared by its header.
- * @param long_name_table Content of the "//" member, or nullptr if the
- *        archive has none.
- * @param long_name_len Size of the long name table.
- * @param file Archive path, registered back as the current file once the
- *        member has been handled.
- * @return 0 on success (a member that is not a valid ELF file is reported on
- * stderr and skipped), AR_MALFORMED_RET if its name can't be resolved.
+ * @param[in] mapped Memory mapping of the whole archive.
+ * @param[in] ofst Offset of the member header from the start of the mapping.
+ * @param[in] member_size Size of the member data, as declared by its header.
+ * @param[in] long_name_table Content of the "//" member, or @c nullptr if the
+ *            archive has none.
+ * @param[in] long_name_len Size of the long name table.
+ * @param[in] file Archive path, registered back as the current file once the
+ *            member has been handled.
+ * @retval 0 Success. A member that is not a valid ELF file is reported on
+ *           stderr and skipped.
+ * @retval AR_MALFORMED_RET The member name can't be resolved.
  */
 static int _display_ar_elf_segment(mappedmem_t* mapped, size_t ofst,
                                    size_t member_size, char* long_name_table,
@@ -144,11 +153,13 @@ static int _display_ar_elf_segment(mappedmem_t* mapped, size_t ofst,
  * doesn't fit in the file makes the file unrecognized. Members are aligned on
  * 2 bytes.
  *
- * @param mapped Memory mapping of the whole archive.
- * @param file Archive path, printed as a header when print_filename is set.
- * @return 0 on success, 1 if the archive is malformed or truncated (reported
- * on stderr). A member that is not a valid ELF file is reported but doesn't
- * change the status.
+ * @param[in] mapped Memory mapping of the whole archive.
+ * @param[in] file Archive path, printed as a header when #print_filename is
+ *            set.
+ * @retval 0 Success. A member that is not a valid ELF file is reported but
+ *           doesn't change the status.
+ * @retval 1 The archive is malformed or truncated (reported on stderr).
+ * @pre @p mapped starts with the @c ARMAG signature.
  */
 int display_ar_file(mappedmem_t* mapped, char* file) {
     size_t ofst = SARMAG;

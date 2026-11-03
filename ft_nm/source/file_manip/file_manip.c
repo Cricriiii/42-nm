@@ -10,6 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+/**
+ * @file file_manip.c
+ * @brief Opening, status and read-only memory mapping of the input files.
+ */
+
 #include "file_manip.h"
 
 #include <fcntl.h>
@@ -20,8 +25,9 @@
  * @brief Open a file in read-only mode. Print the system error message on
  * failure.
  *
- * @param filename Path of the file.
- * @return int. The file descriptor, -1 on failure.
+ * @param[in] filename Path of the file.
+ * @return The file descriptor, or -1 on failure (already reported on stderr).
+ * @pre The file name is registered with print_set_filename().
  */
 int open_file(const char* filename) {
     int file_fd = open(filename, O_RDONLY);
@@ -34,9 +40,12 @@ int open_file(const char* filename) {
 /**
  * @brief Retrieve the status of an open file.
  *
- * @param file_fd File descriptor.
- * @param st Structure filled with the file status.
- * @return int. 0 on success, -1 on failure.
+ * Nothing is printed, errno is set by fstat().
+ *
+ * @param[in] file_fd File descriptor.
+ * @param[out] st Structure filled with the file status.
+ * @retval 0 Success.
+ * @retval -1 Failure.
  */
 int stat_file(int file_fd, struct stat* st) {
     int file_stats = fstat(file_fd, st);
@@ -47,16 +56,18 @@ int stat_file(int file_fd, struct stat* st) {
 }
 
 /**
- * @brief Map an open file into memory, in read-only mode. The caller must
- * release the mapping with munmap().
+ * @brief Map an open file into memory, in read-only mode.
  *
  * Directories and empty files can't be mapped: the former is reported by a
  * warning, the latter is silently refused, as nm does. Any other failure is
  * reported with the system error message.
  *
- * @param file_fd File descriptor.
- * @param mapped Structure filled with the address and size of the mapping.
- * @return int. 0 on success, -1 on failure (already reported to the user).
+ * @param[in] file_fd File descriptor. It can be closed once mapped.
+ * @param[out] mapped Structure filled with the address and size of the
+ *             mapping.
+ * @retval 0 Success.
+ * @retval -1 Failure, already reported to the user.
+ * @post On success, the caller must release the mapping with @c munmap().
  */
 int map_file(int file_fd, mappedmem_t* mapped) {
     struct stat st = {};
