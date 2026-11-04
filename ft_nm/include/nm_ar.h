@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/31 23:13:26 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/03 00:16:01 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/04 15:31:26 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,8 +23,6 @@
 
 #include <ar.h>
 #include <string.h>
-
-#include "file_manip.h"
 
 /** @name Special member names
  *  Content of the @c ar_name field of the special archive members.

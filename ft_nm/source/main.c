@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/16 23:48:21 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/03 10:23:03 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/04 15:30:30 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,11 +16,9 @@
  * over the requested files.
  */
 
-#include <errno.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "file_manip.h"
 #include "nm_ar.h"

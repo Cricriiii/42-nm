@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/18 23:13:42 by cgajean           #+#    #+#             */
-/*   Updated: 2026/10/21 13:20:07 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/04 15:30:37 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "resource_collector.h"
 #include "xalloc.h"
 
 /**

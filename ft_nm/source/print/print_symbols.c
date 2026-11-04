@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/20 17:05:52 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 18:06:56 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/04 15:30:42 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,16 +15,13 @@
  * @brief Sorting, filtering and printing of a symbol list, as nm does.
  */
 
-#include <ctype.h>
 #include <locale.h>
-#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "nm_elf.h"
 #include "options.h"
 #include "print.h"
-#include "resource_collector.h"
 
 /**
  * @brief Set the locale category used by strcoll() when sorting symbols, from

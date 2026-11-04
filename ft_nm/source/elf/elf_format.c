@@ -6,7 +6,7 @@
 /*   By: cgajean <cgajean@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/10/29 18:26:54 by cgajean           #+#    #+#             */
-/*   Updated: 2026/11/02 16:22:08 by cgajean          ###   ########.fr       */
+/*   Updated: 2026/11/04 15:30:57 by cgajean          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,6 @@
  * @brief ELF integrity checks, run before any other read of the file.
  */
 
-#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
